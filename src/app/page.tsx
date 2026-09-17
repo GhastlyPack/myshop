@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Manrope } from "next/font/google";
 import { Wordmark } from "@/components/brand/wordmark";
 import { ClaimForm } from "@/components/landing/claim-form";
 import { CheckoutMock, EditorMock, IncomeMock } from "@/components/landing/feature-mockups";
+import { MarketingFooter } from "@/components/landing/footer";
+import { manrope } from "@/components/landing/fonts";
 import { LandingNav } from "@/components/landing/nav";
+import { JsonLd } from "@/components/seo/json-ld";
+import { absoluteUrl, SITE } from "@/lib/site";
 import { HeroPhone } from "@/components/landing/phone";
 import { ThemeCards } from "@/components/landing/theme-cards";
 import { getCurrentUser, loginPath } from "@/lib/auth";
 import "@/components/storefront/storefront.css";
 import "@/components/landing/landing.css";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-manrope" });
-
 export const metadata: Metadata = {
   title: { absolute: "visitmy.shop — your bio link, but it actually sells" },
   description: "Sell digital products straight from your Instagram bio. Upload a file, drop one link, get paid to your own Stripe, delivered in seconds.",
+  alternates: { canonical: "/" },
 };
 
 const ROWS = [
@@ -60,8 +62,17 @@ export default async function Home() {
   const loginHref = loginPath("/app");
   const loginBase = loginHref.split("?")[0];
 
+  const orgLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Organization", "@id": absoluteUrl("/#org"), name: SITE.name, url: absoluteUrl("/"), logo: absoluteUrl("/icon"), email: SITE.email, sameAs: SITE.profiles },
+      { "@type": "WebSite", "@id": absoluteUrl("/#site"), name: SITE.name, url: absoluteUrl("/"), description: SITE.description, publisher: { "@id": absoluteUrl("/#org") } },
+    ],
+  };
+
   return (
     <div className={`ld ${manrope.variable}`}>
+      <JsonLd data={orgLd} />
       <LandingNav signedIn={Boolean(user)} loginHref={loginHref} />
 
       {/* ---------- hero ---------- */}
@@ -84,7 +95,13 @@ export default async function Home() {
                 <ClaimForm loginBase={loginBase} />
               )}
             </div>
-            <p className="ld-muted mt-6 text-sm">No code. Your own Stripe account. Live in five minutes.</p>
+            <p className="ld-muted mt-6 text-sm">
+              No code. Your own Stripe account. Live in five minutes.{" "}
+              <Link href="/demo" className="underline underline-offset-4 hover:text-[var(--ld-ink)]">
+                See a live store
+              </Link>
+              .
+            </p>
           </div>
           <div className="py-4 lg:py-0">
             <HeroPhone />
@@ -203,27 +220,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- footer ---------- */}
-      <footer className="ld-ink">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-12 sm:px-8 md:flex-row md:items-center md:justify-between">
-          <div>
-            <Wordmark size={22} />
-            <p className="ld-muted mt-2 text-sm">Sell digital products straight from your bio.</p>
-          </div>
-          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Footer">
-            <Link href="/demo" className="ld-muted hover:text-white">
-              Demo store
-            </Link>
-            <Link href="/me" className="ld-muted hover:text-white">
-              My downloads
-            </Link>
-            <Link href={user ? "/app" : loginHref} className="ld-muted hover:text-white">
-              {user ? "Dashboard" : "Log in"}
-            </Link>
-          </nav>
-          <p className="ld-muted text-xs">© {new Date().getFullYear()} visitmy.shop</p>
-        </div>
-      </footer>
+      <MarketingFooter signedIn={Boolean(user)} loginHref={loginHref} />
     </div>
   );
 }

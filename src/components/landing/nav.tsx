@@ -4,7 +4,8 @@ import { Wordmark } from "@/components/brand/wordmark";
 const links = [
   { href: "#features", label: "Features" },
   { href: "#themes", label: "Themes" },
-  { href: "#compare", label: "Compare" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/compare", label: "Compare" },
   { href: "/demo", label: "Demo store" },
 ];
 

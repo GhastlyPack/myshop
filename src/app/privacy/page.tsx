@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal-page";
 
-export const metadata: Metadata = { title: "Privacy policy" };
+export const metadata: Metadata = { title: "Privacy policy", description: "What visitmy.shop collects from creators and buyers, how it is used, and how to delete it.", alternates: { canonical: "/privacy" } };
 
 export default function Privacy() {
   return (

@@ -44,7 +44,7 @@ export default function PricingPage() {
         </p>
         <h2>Compare</h2>
         <p>
-          Stan charges $29 a month before your first sale and $99 a month for pixel tracking and no branding. Linktree's commerce features sit on paid
+          Stan charges $29 a month before your first sale and $99 a month for pixel tracking and no branding. Linktree&apos;s commerce features sit on paid
           tiers with a transaction fee. See the full <Link href="/compare/stan-store">Stan store comparison</Link> and the{" "}
           <Link href="/compare/linktree">Linktree comparison</Link>.
         </p>
