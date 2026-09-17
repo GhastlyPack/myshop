@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { ChangeUsernameForm } from "@/components/app/change-username-form";
 import { DeleteStoreDialog } from "@/components/app/delete-store-dialog";
 import { PaymentsSettings } from "@/components/app/payments-settings";
 import { SettingsForm } from "@/components/app/settings-form";
 import { StorePublishToggle } from "@/components/app/store-publish-toggle";
 import { requireStore } from "@/lib/auth";
+import { env } from "@/lib/env";
 import { CURRENCIES } from "@/lib/format";
 import { publicUrl } from "@/lib/storage";
 
@@ -17,6 +19,11 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Your profile, links, currency and payouts.</p>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold">Link</h2>
+        <ChangeUsernameForm current={store.username} host={new URL(env.APP_BASE_URL).host} />
+      </section>
 
       <SettingsForm
         initial={{

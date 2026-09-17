@@ -9,6 +9,7 @@ import { productFiles, products, stores, type SocialLinks } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
 import { CURRENCIES } from "@/lib/format";
 import { revalidateStore } from "@/lib/queries";
+import { normalizeUsername, usernameError } from "@/lib/reserved";
 import { deleteObject } from "@/lib/storage";
 
 const handle = z.string().trim().max(120);
@@ -103,4 +104,21 @@ export async function deleteStore(confirmUsername: string): Promise<never | { ok
   revalidateStore(store.username);
   revalidatePath("/app");
   redirect("/app/onboarding");
+}
+
+/** Change the store's public link (visitmy.shop/<username>). Old link stops working immediately. */
+export async function changeUsername(raw: string): Promise<{ ok: true; username: string } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const username = normalizeUsername(String(raw ?? ""));
+  if (username === store.username) return { ok: true, username };
+  const err = usernameError(username);
+  if (err) return { ok: false, error: err };
+  const taken = await db.query.stores.findFirst({ where: eq(stores.username, username), columns: { id: true } });
+  if (taken) return { ok: false, error: "That username is taken." };
+  const old = store.username;
+  await db.update(stores).set({ username }).where(eq(stores.id, store.id));
+  revalidateStore(old);
+  revalidateStore(username);
+  revalidatePath("/app", "layout");
+  return { ok: true, username };
 }
