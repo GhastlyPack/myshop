@@ -1,54 +1,67 @@
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { keepPercent, PLANS, ROADMAP, TRIAL } from "@/lib/plans";
 
-/** The two plan cards. Static, no toggle: both prices are visible so nothing hides behind a click. */
+/**
+ * The two plan cards. Static, no toggle: both prices are visible so nothing hides behind a click.
+ * Pro is the dark card; CTAs are pinned to the bottom so they sit on one row.
+ */
 export function PlanCards({ ctaHref }: { ctaHref: string }) {
   return (
     <div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {PLANS.map((p) => (
-          <div key={p.key} className={`ld-card flex flex-col p-7 sm:p-8 ${p.highlight ? "border-[var(--ld-ink)]" : ""}`}>
-            <div className="flex items-baseline justify-between">
-              <h3 className="text-xl font-semibold tracking-tight">{p.name}</h3>
-              {p.highlight && <span className="ld-muted text-xs font-semibold tracking-[0.12em] uppercase">Most creators</span>}
-            </div>
-            <p className="ld-muted mt-1 text-sm">{p.tagline}</p>
-            <div className="mt-6 flex items-baseline gap-1.5">
-              <span className="ld-heading text-[3rem]">${p.monthly}</span>
-              <span className="ld-muted text-sm">/month</span>
-            </div>
-            <p className="ld-muted mt-1 text-sm">
-              or ${p.annual}/year, two months free
-            </p>
-            <p className={`mt-4 rounded-lg px-3.5 py-2.5 text-sm font-medium ${p.feePercent === 0 ? "bg-[var(--ld-ink)] text-white" : "bg-[var(--ld-tint)]"}`}>
-              Keep {keepPercent(p)}% of every sale{p.feePercent ? ` (${p.feePercent}% fee)` : " (0% fee)"}
-            </p>
-            <ul className="mt-6 space-y-2.5 text-[0.95rem]">
-              {p.key === "pro" && <li className="ld-muted">Everything in Basic, plus:</li>}
-              {p.features.map((f) => (
-                <li key={f} className="flex gap-2.5">
-                  <span className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ld-orange)]" aria-hidden />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            {p.key === "pro" && (
-              <div className="mt-6 border-t ld-line pt-5">
-                <div className="ld-muted text-xs font-semibold tracking-[0.12em] uppercase">Coming soon to Pro</div>
-                <ul className="ld-muted mt-2 space-y-1.5 text-sm">
-                  {ROADMAP.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
+      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
+        {PLANS.map((p) => {
+          const dark = Boolean(p.highlight);
+          const muted = dark ? "text-white/60" : "ld-muted";
+          const line = dark ? "border-white/15" : "ld-line";
+          return (
+            <div key={p.key} className={`flex flex-col rounded-2xl border p-7 sm:p-9 ${dark ? "border-transparent bg-[var(--ld-ink)] text-white" : "border-[var(--ld-line)] bg-white"}`}>
+              <div className="flex items-center justify-between gap-4">
+                <h3 className="text-2xl font-semibold tracking-tight">{p.name}</h3>
+                {dark && <span className="rounded-full bg-[var(--ld-orange)] px-3 py-1 text-xs font-semibold text-white">Most creators</span>}
               </div>
-            )}
-            <Link href={ctaHref} className={`ld-btn mt-8 ${p.highlight ? "ld-btn-primary" : "ld-btn-ink"}`}>
-              Start free trial
-            </Link>
-          </div>
-        ))}
+              <p className={`mt-1.5 text-[0.95rem] ${muted}`}>{p.tagline}</p>
+
+              <div className="mt-8 flex flex-wrap items-end gap-x-3 gap-y-2">
+                <div className="flex items-baseline gap-1">
+                  <span className="ld-heading text-[3.5rem] leading-none">${p.monthly}</span>
+                  <span className={`text-base ${muted}`}>/month</span>
+                </div>
+                <span className={`mb-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${line} ${muted}`}>${p.annual}/year · two months free</span>
+              </div>
+
+              <div className={`mt-7 border-y py-4 ${line}`}>
+                <div className="text-lg font-semibold">You keep {keepPercent(p)}% of every sale</div>
+                <div className={`mt-0.5 text-sm ${muted}`}>{p.feePercent ? `${p.feePercent}% platform fee per sale` : "No platform fee"}</div>
+              </div>
+
+              <ul className="mt-7 space-y-3 text-[0.95rem]">
+                {p.key === "pro" && <li className={`text-sm font-medium ${muted}`}>Everything in Basic, plus</li>}
+                {p.features.map((f) => (
+                  <li key={f} className="flex items-start gap-3">
+                    <Check size={18} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[var(--ld-orange)]" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {p.key === "pro" && (
+                <p className={`mt-6 text-sm leading-relaxed ${muted}`}>
+                  <span className="font-semibold text-white">Coming soon to Pro:</span> {ROADMAP.join(", ").replace(/, ([^,]*)$/, ", and $1").toLowerCase()}.
+                </p>
+              )}
+
+              <div className="mt-auto pt-9">
+                <Link href={ctaHref} className={`ld-btn w-full ${dark ? "ld-btn-primary" : "ld-btn-ink"}`}>
+                  Start free trial
+                </Link>
+                <p className={`mt-3 text-center text-xs ${muted}`}>{TRIAL}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <p className="ld-muted mt-5 text-sm">{TRIAL} Stripe’s card processing fee applies to paid sales on both plans and goes to Stripe.</p>
+      <p className="ld-muted mt-5 text-center text-sm">Stripe’s card processing fee applies to paid sales on both plans and goes to Stripe, not us.</p>
     </div>
   );
 }
