@@ -25,7 +25,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
     <ProductEditor
       product={{
         id: product.id,
-        title: product.title,
+        title: product.title === "Untitled product" ? "" : product.title,
         subtitle: product.subtitle ?? "",
         slug: product.slug,
         description: product.description ?? "",
