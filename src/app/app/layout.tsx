@@ -11,9 +11,11 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const store = await getCurrentStore();
-  // Slim nag when a store's trial has lapsed with no active subscription (Basic terms, not grandfathered).
+  // Slim nag when a store is on Basic terms with no active subscription (not grandfathered):
+  // "start your trial" for a store that never trialed, "trial ended" once it has.
   const plan = store ? await resolvePlan(store) : null;
   const nag = Boolean(plan && plan.tier === "basic" && plan.status !== "active");
+  const neverTrialed = !plan?.trialEndsAt;
   const navProps = {
     user: { email: user.email, name: user.name, role: user.role },
     store: store ? { username: store.username, displayName: store.displayName } : null,
@@ -28,9 +30,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {nag && (
           <div className="border-b bg-amber-50 px-4 py-2.5 text-sm text-amber-900 sm:px-8 dark:bg-amber-950/40 dark:text-amber-200">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
-              <span>Your free trial has ended. You&apos;re on Basic terms (5% fee).</span>
+              <span>
+                {neverTrialed
+                  ? "You're on Basic terms (5% fee). Start your free 7-day Pro trial for 0% fees."
+                  : "Your free trial has ended. You're on Basic terms (5% fee)."}
+              </span>
               <Link href="/app/billing" className="font-semibold underline underline-offset-2">
-                Upgrade to Pro
+                {neverTrialed ? "Start free trial" : "Upgrade to Pro"}
               </Link>
             </div>
           </div>

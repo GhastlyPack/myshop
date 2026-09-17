@@ -16,6 +16,7 @@ import { orders, paymentAccounts, products, stores, subscriptions, users, type S
 import {
   BASIC_FEE_BPS,
   PRO_FEE_BPS,
+  TRIAL_DAYS,
   createBillingCheckout,
   createPortalSession,
   getOrCreateCustomer,
@@ -264,7 +265,7 @@ async function main() {
       const c2 = await getOrCreateCustomer(user);
       assert.equal(c2, c1, "reuses the stored customer");
     });
-    await test("createBillingCheckout honours a live trial via trial_end and resolves price by lookup_key", async () => {
+    await test("createBillingCheckout gives a first-time subscriber a card-backed 7-day trial and resolves price by lookup_key", async () => {
       resetPriceCache();
       const user = (await db.query.users.findFirst({ where: eq(users.id, uid) }))!;
       const url = await createBillingCheckout({ user, lookupKey: "pro_monthly", returnUrl: "http://x/app/billing" });
@@ -273,7 +274,18 @@ async function main() {
       assert.equal(p.mode, "subscription");
       assert.equal(p.line_items?.[0]?.price, "price_pm");
       assert.equal(p.client_reference_id, uid);
-      assert.ok(p.subscription_data?.trial_end, "carries the remaining trial");
+      assert.equal(p.subscription_data?.trial_period_days, TRIAL_DAYS, "starts a fresh trial");
+      assert.equal(p.payment_method_collection, "always", "requires a card up front");
+      assert.equal(p.subscription_data?.trial_settings?.end_behavior?.missing_payment_method, "cancel");
+    });
+    await test("createBillingCheckout gives no trial once the store has had a Stripe subscription", async () => {
+      resetPriceCache();
+      await upsertSub({ plan: "pro", status: "canceled", stripeSubscriptionId: "sub_old", stripeCustomerId: "cus_old" });
+      const user = (await db.query.users.findFirst({ where: eq(users.id, uid) }))!;
+      await createBillingCheckout({ user, lookupKey: "pro_monthly", returnUrl: "http://x/app/billing" });
+      const p = last("checkout.sessions.create")!.params as Stripe.Checkout.SessionCreateParams;
+      assert.equal(p.subscription_data?.trial_period_days, undefined, "no repeat trial");
+      assert.equal(p.payment_method_collection, "always");
     });
     await test("createPortalSession opens the customer portal", async () => {
       const user = (await db.query.users.findFirst({ where: eq(users.id, uid) }))!;
