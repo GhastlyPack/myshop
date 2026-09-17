@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 import { normalizeUsername, usernameError } from "@/lib/reserved";
 
 /**
@@ -49,11 +48,10 @@ export function ClaimForm({ loginBase, tone = "light", autoFocus }: { loginBase:
         />
         <button type="submit" className={`ld-btn ld-btn-sm ${tone === "orange" ? "ld-btn-ink" : "ld-btn-primary"}`}>
           Claim your link
-          <ArrowRight size={16} strokeWidth={2.25} />
         </button>
       </div>
       <p className={`mt-2.5 min-h-5 pl-4 text-xs ${error ? "text-red-600" : tone === "orange" ? "text-white/75" : "ld-muted"}`} aria-live="polite">
-        {error ?? "Free to claim. Letters, numbers, dots and underscores."}
+        {error ?? "Letters, numbers, dots and underscores."}
       </p>
     </form>
   );
