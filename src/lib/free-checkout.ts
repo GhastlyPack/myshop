@@ -5,6 +5,7 @@ import { renderDeliveryEmail } from "@/emails/delivery";
 import { env } from "@/lib/env";
 import { newId, newToken } from "@/lib/ids";
 import { sendMail } from "@/lib/mailer";
+import { capiLead } from "@/lib/meta";
 import { track } from "@/lib/track";
 
 /**
@@ -41,6 +42,9 @@ export type ClaimInput = {
   source: TrafficSource;
   sessionId?: string | null;
   ip?: string | null;
+  userAgent?: string | null;
+  /** Absolute product page URL, used as the CAPI event source. */
+  pageUrl?: string | null;
 };
 
 export type ClaimResult = { ok: true; token: string } | { ok: false; error: string };
@@ -73,6 +77,11 @@ export async function claimFreeProduct(input: ClaimInput): Promise<ClaimResult> 
 
   await sendDeliveryEmail({ store, product, files: input.files, links: input.links, buyerName: input.buyerName, buyerEmail: email, token, isPaid: false });
   await track({ storeId: store.id, productId: product.id, type: "lead", sessionId: input.sessionId, source: input.source });
+  // Server-side Meta Lead; the thanks page fires the browser Lead with the same order id so Meta dedupes.
+  void capiLead(
+    { eventId: orderId, eventSourceUrl: input.pageUrl ?? `${env.APP_BASE_URL}/${store.username}/${product.slug}`, email, ip: input.ip ?? undefined, userAgent: input.userAgent ?? undefined },
+    { productId: product.id, productName: product.title, currency: product.currency },
+  );
   return { ok: true, token };
 }
 

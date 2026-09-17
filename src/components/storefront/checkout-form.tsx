@@ -6,6 +6,7 @@ import type { CustomField } from "@/db/schema";
 import { checkoutAction, type CheckoutState } from "@/app/[username]/[slug]/actions";
 import { formatPrice } from "./price";
 import { sendBeacon, usePageUrl, useSessionId } from "./session";
+import { trackPixel } from "@/components/meta-pixel";
 
 type Props = {
   username: string;
@@ -90,7 +91,10 @@ export function CheckoutForm(p: Props) {
   return (
     <form
       action={action}
-      onSubmit={() => sendBeacon({ storeId: p.storeId, productId: p.productId, type: "checkout_start" })}
+      onSubmit={() => {
+        sendBeacon({ storeId: p.storeId, productId: p.productId, type: "checkout_start" });
+        trackPixel("InitiateCheckout", { content_ids: [p.productId], currency: p.currency, value: p.priceCents / 100 });
+      }}
       className="space-y-4"
       noValidate={false}
     >

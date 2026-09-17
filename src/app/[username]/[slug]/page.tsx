@@ -10,6 +10,7 @@ import { Stars } from "@/components/storefront/stars";
 import { CompactStoreHeader } from "@/components/storefront/store-header";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { TrackView } from "@/components/storefront/track-view";
+import { PixelEvent } from "@/components/storefront/pixel-event";
 import { getPublicProduct } from "@/lib/queries";
 import { publicUrl } from "@/lib/storage";
 
@@ -46,6 +47,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
   return (
     <ThemeRoot theme={theme}>
       {!isPreview && <TrackView storeId={store.id} productId={product.id} type="product_view" />}
+      {!isPreview && (
+        <PixelEvent
+          event="ViewContent"
+          params={{ content_ids: [product.id], content_name: product.title, content_type: "product", currency: product.currency, value: product.priceCents / 100 }}
+        />
+      )}
       <main className="mx-auto w-full max-w-[640px] px-4 pt-6 pb-6 sm:px-6 sm:pt-8">
         {!landing && <CompactStoreHeader store={store} theme={theme} />}
 

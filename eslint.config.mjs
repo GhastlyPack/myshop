@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" }],
+      // Route handlers (CSV export, OAuth redirects) need a full navigation, not <Link>.
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
 ]);

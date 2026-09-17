@@ -2,10 +2,13 @@ import "server-only";
 import type Stripe from "stripe";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entitlements, orders, paymentAccounts, products, stores } from "@/db/schema";
+import { asc } from "drizzle-orm";
+import { entitlements, orders, paymentAccounts, productFiles, productLinks, products, stores } from "@/db/schema";
+import { env } from "@/lib/env";
+import { sendDeliveryEmail } from "@/lib/free-checkout";
+import { capiPurchase } from "@/lib/meta";
 import { newId, newToken } from "@/lib/ids";
 import { track } from "@/lib/track";
-import { sendPaidDeliveryEmail, thanksUrl } from "./email";
 import { getStripe } from "./stripe";
 
 /**
@@ -104,22 +107,17 @@ export async function handleCheckoutPaid(session: Stripe.Checkout.Session, accou
   ]);
 
   if (store && product) {
-    try {
-      await sendPaidDeliveryEmail({
-        to: order.buyerEmail,
-        buyerName: order.buyerName,
-        storeName: store.displayName,
-        productTitle: product.title,
-        amountCents: updated.amountCents,
-        currency: updated.currency,
-        thanksUrl: thanksUrl(store.username, product.slug, ent.token),
-        confirmationSubject: product.confirmationSubject,
-        confirmationBody: product.confirmationBody,
-      });
-    } catch (e) {
-      // The order is paid and the entitlement exists; don't let a mail hiccup trigger Stripe retries.
-      console.error("[webhook] delivery email failed", order.id, e);
-    }
+    const [files, links] = await Promise.all([
+      db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),
+      db.select().from(productLinks).where(eq(productLinks.productId, product.id)).orderBy(asc(productLinks.position)),
+    ]);
+    // Same template as the free flow. Never throws, so a mail hiccup can't trigger Stripe retries.
+    await sendDeliveryEmail({ store, product, files, links, buyerName: order.buyerName, buyerEmail: order.buyerEmail, token: ent.token, isPaid: true });
+    // Server-side Meta Purchase; the thanks page fires the browser Purchase with the same order id.
+    void capiPurchase(
+      { eventId: order.id, eventSourceUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}`, email: order.buyerEmail },
+      { productId: product.id, productName: product.title, amountCents: updated.amountCents, currency: updated.currency, orderId: order.id },
+    );
   }
 
   await track({ storeId: order.storeId, productId: order.productId, type: "purchase", source: order.source });

@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { entitlements, orders, productFiles, productLinks, products, reviews, stores } from "@/db/schema";
 import { StoreFooter } from "@/components/storefront/footer";
 import { PendingPoll } from "@/components/storefront/pending-poll";
+import { PixelEvent } from "@/components/storefront/pixel-event";
 import { ReviewForm } from "@/components/storefront/review-form";
 import { CompactStoreHeader } from "@/components/storefront/store-header";
 import { ThemeRoot } from "@/components/storefront/theme-root";
@@ -60,6 +61,13 @@ export default async function ThanksPage({ params, searchParams }: Props) {
         <CompactStoreHeader store={store} theme={theme} />
         <div className="mt-8 space-y-6">
           {order.status === "pending" && <PendingPoll email={order.buyerEmail} />}
+          {paid && (
+            <PixelEvent
+              event={order.amountCents === 0 ? "Lead" : "Purchase"}
+              eventId={order.id}
+              params={{ content_ids: [product.id], content_name: product.title, content_type: "product", currency: order.currency, value: order.amountCents / 100 }}
+            />
+          )}
           {(order.status === "failed" || order.status === "refunded") && (
             <div className="sf-surface p-6 text-center">
               <h1 className="sf-heading text-[1.4rem]">{order.status === "refunded" ? "This order was refunded" : "Payment didn't go through"}</h1>

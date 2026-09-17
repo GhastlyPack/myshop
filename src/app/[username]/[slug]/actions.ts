@@ -76,7 +76,7 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
   } catch {}
 
   if (product.priceCents === 0) {
-    const res = await claimFreeProduct({ store, product, files, links, buyerName: name, buyerEmail: email, customFields: fields.values, marketingOptIn, source, sessionId, ip });
+    const res = await claimFreeProduct({ store, product, files, links, buyerName: name, buyerEmail: email, customFields: fields.values, marketingOptIn, source, sessionId, ip, userAgent: h.get("user-agent"), pageUrl: pageUrl ?? null });
     if (!res.ok) return { error: res.error };
     redirect(`/${store.username}/${product.slug}/thanks?e=${res.token}`);
   }
