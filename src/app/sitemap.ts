@@ -12,6 +12,8 @@ const STATIC: [string, MetadataRoute.Sitemap[number]["changeFrequency"], number]
   ["/compare", "monthly", 0.8],
   ["/compare/stan-store", "monthly", 0.8],
   ["/compare/linktree", "monthly", 0.7],
+  ["/compare/beacons", "monthly", 0.6],
+  ["/compare/gumroad", "monthly", 0.6],
   ["/guides/sell-digital-products-from-instagram-bio", "monthly", 0.8],
   ["/faq", "monthly", 0.6],
   ["/creators", "daily", 0.6],

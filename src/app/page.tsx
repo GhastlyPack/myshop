@@ -68,7 +68,7 @@ export default async function Home() {
               )}
             </div>
             <p className="ld-muted mt-6 text-sm">
-              From $9 a month. 14-day free trial with full Pro access, no card required.{" "}
+              From $9 a month. 7-day free trial with full Pro access.{" "}
               <Link href="/demo" className="underline underline-offset-4 hover:text-[var(--ld-ink)]">
                 See a live store
               </Link>
@@ -156,7 +156,7 @@ export default async function Home() {
               <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">Start at $9. Keep up to 100%.</h2>
               <p className="ld-muted mt-5 text-lg leading-relaxed">
                 Basic is ${PLANS[0].monthly} a month and keeps 95% of each sale. Pro is ${PLANS[1].monthly} a month with a 0% fee, the full design editor,
-                Instagram auto-replies, and pixels. Stan charges ${COMPETITORS.stan.entry} and ${COMPETITORS.stan.top}. Every account starts with 14 days of Pro, no card required.
+                Instagram auto-replies, and pixels. Stan charges ${COMPETITORS.stan.entry} and ${COMPETITORS.stan.top}. Every account starts with 7 days of Pro.
               </p>
               <Link href="/pricing" className="ld-btn ld-btn-primary mt-8">
                 See pricing

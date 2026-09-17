@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const ROWS: [string, string, string][] = [
   ["Monthly price", "$9 Basic or $49 Pro", "$29 Creator or $99 Creator Pro"],
   ["Fee on sales", "5% on Basic, 0% on Pro", "0% on both plans"],
-  ["Free trial", "14 days of full Pro, no card", "14 days"],
+  ["Free trial", "7 days of full Pro", "14 days"],
   ["Store design", "Preset themes on Basic; full editor (fonts, colors, layout) on Pro", "A theme plus button and background color"],
   ["Product URLs", "visitmy.shop/you/my-guide", "stan.store/you/p/my-guide-4821, numeric suffix forced"],
   ["Free download asks for", "Name and email", "Name, email, full mailing address, two checkboxes, reCAPTCHA"],
@@ -90,7 +90,7 @@ export default function StanComparePage() {
           Stan is $29 a month before your first sale and $99 for Creator Pro. visitmy.shop is $9 for Basic and $49 for Pro: a third of their entry
           price and half their top price. The honest difference is the fee. Stan charges 0% on both plans; our Basic plan keeps 5% of each sale and Pro
           keeps nothing. Under about $800 a month in sales, Basic still comes out cheaper than Stan’s $29. Above that, Pro at $49 with a 0% fee beats
-          Stan’s $99. Every account starts with 14 days of full Pro access, no card required. See <Link href="/pricing">pricing</Link>.
+          Stan’s $99. Every account starts with 7 days of full Pro access. See <Link href="/pricing">pricing</Link>.
         </p>
 
         <h2>Moving from Stan</h2>

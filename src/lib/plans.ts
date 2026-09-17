@@ -56,6 +56,6 @@ export const COMPETITORS = {
   linktree: { name: "Linktree", entry: 0, top: 24, fee: "on commerce tiers" },
 };
 
-export const TRIAL = "14-day free trial with full Pro access. No card required.";
+export const TRIAL = "7-day free trial with full Pro access.";
 
 export const keepPercent = (p: Plan) => 100 - p.feePercent;

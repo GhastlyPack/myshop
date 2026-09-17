@@ -6,7 +6,7 @@ import { getCurrentUser, loginPath } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "visitmy.shop plans: Basic at $9 a month with a 5% fee, Pro at $49 a month with a 0% fee. 14-day free trial with full Pro access, no card required.",
+  description: "visitmy.shop plans: Basic at $9 a month with a 5% fee, Pro at $49 a month with a 0% fee. 7-day free trial with full Pro access.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -19,8 +19,8 @@ export default async function PricingPage() {
         <div className="max-w-2xl">
           <h1 className="ld-heading text-[2.6rem] sm:text-[3.4rem]">Start at $9. Keep up to 100%.</h1>
           <p className="ld-muted mt-6 text-xl leading-relaxed">
-            Two plans. Basic keeps 95% of each sale. When your sales grow, Pro pays for itself by dropping the fee to zero. Every account starts with 14
-            days of full Pro access, no card required.
+            Two plans. Basic keeps 95% of each sale. When your sales grow, Pro pays for itself by dropping the fee to zero. Every account starts with 7 days
+            of full Pro access.
           </p>
         </div>
         <div className="mt-12">

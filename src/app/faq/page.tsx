@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const FAQ: [string, string][] = [
   ["What does it cost?", "Two plans. Basic is $9 a month (or $90 a year) with a 5% fee on sales, so you keep 95%. Pro is $49 a month (or $490 a year) with a 0% fee, so you keep 100%. Stripe's card processing fee applies to paid sales on both plans and goes to Stripe."],
-  ["Can I try it first?", "Yes. Every new account gets a 14-day free trial with full Pro access. No card is required to start. When the trial ends you pick Basic or Pro."],
+  ["Can I try it first?", "Yes. Every new account starts with a 7-day free trial of full Pro. You add a card at signup and nothing is charged until the trial ends; cancel before then and you pay nothing. When the trial ends, the plan you picked starts."],
   ["When should I move from Basic to Pro?", "Basic is cheaper until you sell about $800 a month. Above that, Pro's 0% fee saves you more than the $40 difference in price, and you get the full design editor, Instagram auto-replies, discount codes, order bumps, custom checkout fields, pixel tracking, and team access."],
   ["How do I get paid?", "You connect your own Stripe account once. Buyers pay you directly through Stripe, the money lands in your Stripe balance, and Stripe pays out to your bank on its normal schedule. We never hold your funds."],
   ["What can I sell?", "Digital downloads such as PDFs, guides, templates, presets, audio, video, and zip files, free or paid. You can also add link products that point anywhere, for example a booking page or a YouTube playlist."],
