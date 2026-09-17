@@ -13,6 +13,7 @@
     "db:studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
+    "import:products": "tsx scripts/import-products.ts",
     "build:web": "next build"
   },
   "dependencies": {

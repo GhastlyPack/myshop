@@ -47,8 +47,8 @@ export async function GET(req: Request) {
 
   try {
     const { accountId, livemode } = await exchangeCode(code);
-    const status = await getAccountStatus(accountId).catch(() => ({ chargesEnabled: false, detailsSubmitted: false, email: null }));
-    const details = { email: status.email, detailsSubmitted: status.detailsSubmitted, livemode };
+    const status = await getAccountStatus(accountId).catch(() => ({ chargesEnabled: false, payoutsEnabled: false, detailsSubmitted: false, email: null, currentlyDue: [] as string[], disabledReason: null }));
+    const details = { email: status.email, detailsSubmitted: status.detailsSubmitted, livemode, payoutsEnabled: status.payoutsEnabled, currentlyDue: status.currentlyDue, disabledReason: status.disabledReason };
     await db
       .insert(paymentAccounts)
       .values({ id: newId("pay"), storeId: store.id, provider: "stripe", externalId: accountId, chargesEnabled: status.chargesEnabled, details })

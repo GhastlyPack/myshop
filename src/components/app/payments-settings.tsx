@@ -44,7 +44,7 @@ async function StripeCard({ storeId }: { storeId: string }) {
     // Best-effort live refresh; keep the stored snapshot if Stripe is unreachable.
     try {
       const live = await getAccountStatus(acct.externalId);
-      const details = { ...acct.details, email: live.email, detailsSubmitted: live.detailsSubmitted };
+      const details = { ...acct.details, email: live.email, detailsSubmitted: live.detailsSubmitted, payoutsEnabled: live.payoutsEnabled, currentlyDue: live.currentlyDue, disabledReason: live.disabledReason };
       if (live.chargesEnabled !== acct.chargesEnabled || JSON.stringify(details) !== JSON.stringify(acct.details)) {
         [acct] = await db
           .update(paymentAccounts)
@@ -113,17 +113,65 @@ async function StripeCard({ storeId }: { storeId: string }) {
           )}
           {livemode === false && <Badge variant="outline">Test mode</Badge>}
         </div>
-        {!acct.chargesEnabled && (
-          <p className="text-sm text-muted-foreground">
-            Stripe still needs a few details before you can take payments. Finish onboarding in your{" "}
-            <a href="https://dashboard.stripe.com/" target="_blank" rel="noreferrer" className="underline">
-              Stripe dashboard
-            </a>
-            , then come back and refresh.
-          </p>
-        )}
+        {!acct.chargesEnabled && <Requirements details={acct.details} />}
       </CardContent>
     </Card>
+  );
+}
+
+const REQUIREMENT_LABELS: Record<string, string> = {
+  "external_account": "Add a bank account for payouts",
+  "tos_acceptance.date": "Accept Stripe's terms of service",
+  "tos_acceptance.ip": "Accept Stripe's terms of service",
+  "business_profile.url": "Add your business website or social profile",
+  "business_profile.mcc": "Choose your business category",
+  "business_profile.product_description": "Describe what you sell",
+  "business_type": "Choose your business type",
+  "individual.first_name": "Add your legal name",
+  "individual.last_name": "Add your legal name",
+  "individual.dob.day": "Add your date of birth",
+  "individual.address.line1": "Add your address",
+  "individual.address.postal_code": "Add your address",
+  "individual.ssn_last_4": "Add the last 4 digits of your SSN",
+  "individual.id_number": "Add your tax ID number",
+  "individual.phone": "Add your phone number",
+  "individual.email": "Add your email",
+  "individual.verification.document": "Upload an ID document",
+  "representative.first_name": "Add the account representative's name",
+  "company.name": "Add your company name",
+  "company.tax_id": "Add your company tax ID",
+};
+
+function humanize(key: string) {
+  if (REQUIREMENT_LABELS[key]) return REQUIREMENT_LABELS[key];
+  const base = key.split(".").pop() ?? key;
+  return base.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function Requirements({ details }: { details: Record<string, unknown> }) {
+  const due = Array.isArray(details.currentlyDue) ? (details.currentlyDue as string[]) : [];
+  const reason = typeof details.disabledReason === "string" ? details.disabledReason : null;
+  const items = Array.from(new Set(due.map(humanize)));
+  return (
+    <div className="space-y-2 text-sm text-muted-foreground">
+      <p>
+        Stripe won&apos;t let this account take payments yet
+        {reason ? <span className="font-mono text-xs"> ({reason})</span> : null}. Finish these in your{" "}
+        <a href="https://dashboard.stripe.com/account/onboarding" target="_blank" rel="noreferrer" className="underline">
+          Stripe dashboard
+        </a>
+        , then come back and refresh this page:
+      </p>
+      {items.length > 0 ? (
+        <ul className="list-disc space-y-1 pl-5">
+          {items.map((i) => (
+            <li key={i}>{i}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>Stripe hasn&apos;t listed specific items. Open the dashboard and complete the &quot;Activate your account&quot; checklist.</p>
+      )}
+    </div>
   );
 }
 

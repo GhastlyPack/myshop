@@ -64,14 +64,26 @@ export async function exchangeCode(code: string): Promise<ConnectedAccount> {
   return { accountId: token.stripe_user_id, livemode: Boolean(token.livemode), scope: token.scope ?? null };
 }
 
-export type AccountStatus = { chargesEnabled: boolean; detailsSubmitted: boolean; email: string | null };
+export type AccountStatus = {
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  email: string | null;
+  /** Stripe requirement keys the account still has to satisfy (e.g. "external_account", "tos_acceptance.date"). */
+  currentlyDue: string[];
+  /** Stripe's reason charges are off, e.g. "requirements.past_due", or null. */
+  disabledReason: string | null;
+};
 
 export async function getAccountStatus(accountId: string): Promise<AccountStatus> {
   const acct = await getStripe().accounts.retrieve(accountId);
   return {
     chargesEnabled: Boolean(acct.charges_enabled),
+    payoutsEnabled: Boolean(acct.payouts_enabled),
     detailsSubmitted: Boolean(acct.details_submitted),
     email: acct.email ?? null,
+    currentlyDue: acct.requirements?.currently_due ?? [],
+    disabledReason: acct.requirements?.disabled_reason ?? null,
   };
 }
 

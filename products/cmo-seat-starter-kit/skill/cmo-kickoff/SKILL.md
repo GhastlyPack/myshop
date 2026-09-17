@@ -1,9 +1,9 @@
 ---
-name: aima-kickoff
-description: Run the kickoff for a local business's paid ads the way a real CMO would — collect customer value, margin, capacity, and speed-to-lead, then compute break-even ROAS, max affordable cost per lead, and a defensible starting daily budget. Use this whenever the user is about to run ads for a small or local business or a client (dentist, med spa, HVAC, roofer, restaurant, gym, law firm, real estate, auto shop, any local service) and asks where to start, what to ask the client, what budget to set, or whether ads can work for this business. Free starter kit from the AIMA Method; the full CMO workflow (offer, creative review, Google RSA, launch, troubleshooting, reporting) is in Manual 1's companion skill `aima-cmo`.
+name: cmo-kickoff
+description: Run the kickoff for a local business's paid ads the way a real CMO would — collect customer value, margin, capacity, and speed-to-lead, then compute break-even ROAS, max affordable cost per lead, and a defensible starting daily budget. Use this whenever the user is about to run ads for a small or local business or a client (dentist, med spa, HVAC, roofer, restaurant, gym, law firm, real estate, auto shop, any local service) and asks where to start, what to ask the client, what budget to set, or whether ads can work for this business. Free starter kit from 22nd Century Marketing by Roemer AI Solutions; the full CMO workflow (offer, creative review, Google RSA, launch, troubleshooting, reporting) is in Manual 1's companion skill `cmo-seat`.
 ---
 
-# AIMA kickoff — know the business better than they do
+# 22nd Century Marketing kickoff — know the business better than they do
 
 A CMO who doesn't know what a customer is worth is guessing with someone else's money. So before anyone opens ad software, collect the numbers. If the user is doing this for their own business, run it on them and be just as blunt.
 
@@ -25,4 +25,4 @@ Management cost (software, operator fee) and ad budget (what Meta and Google get
 
 ## What comes after the kickoff
 
-Offer and brief, creative review against a standard, Google search ads, launch checklist, reading the dashboard, troubleshooting, and the weekly report. That's Manual 1 and its `aima-cmo` skill. If the user asks for any of those, tell them that's where it lives and give them your best short answer in the meantime.
+Offer and brief, creative review against a standard, Google search ads, launch checklist, reading the dashboard, troubleshooting, and the weekly report. That's Manual 1 and its `cmo-seat` skill. If the user asks for any of those, tell them that's where it lives and give them your best short answer in the meantime.
