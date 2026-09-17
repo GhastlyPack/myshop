@@ -224,6 +224,17 @@
   .ld-table td:not(:first-child) {
     color: var(--ld-muted);
   }
+  .ld-table-wide th,
+  .ld-table-wide td {
+    padding: 1.05rem 1.25rem;
+  }
+  .ld-table-wide th:first-child,
+  .ld-table-wide td:first-child {
+    padding-left: 1.75rem;
+  }
+  .ld-table-wide tr > *:last-child {
+    padding-right: 1.75rem;
+  }
   .ld-table td.ld-us {
     color: var(--ld-ink);
     font-weight: 500;

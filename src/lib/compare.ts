@@ -6,10 +6,11 @@ import { PLANS } from "./plans";
  */
 export type CompetitorKey = "stan" | "linktree" | "beacons" | "gumroad";
 
-export const COMPETITORS: Record<CompetitorKey, { name: string; slug: string; price: string; fee: string; verdict: string; bestFor: string; strengths: string[]; gaps: string[] }> = {
+export const COMPETITORS: Record<CompetitorKey, { name: string; slug: string; logo: string; price: string; fee: string; verdict: string; bestFor: string; strengths: string[]; gaps: string[] }> = {
   stan: {
     name: "Stan store",
     slug: "stan-store",
+    logo: "/landing/logos/stan.png",
     price: "$29 or $99 a month",
     fee: "0%",
     verdict: "The best-known creator store. Strong on courses and bookings, weak on design and checkout.",
@@ -20,6 +21,7 @@ export const COMPETITORS: Record<CompetitorKey, { name: string; slug: string; pr
   linktree: {
     name: "Linktree",
     slug: "linktree",
+    logo: "/landing/logos/linktree.png",
     price: "Free, paid tiers for commerce",
     fee: "On commerce tiers",
     verdict: "A page of links, not a store. Great at pointing people elsewhere, thin at selling a file.",
@@ -30,6 +32,7 @@ export const COMPETITORS: Record<CompetitorKey, { name: string; slug: string; pr
   beacons: {
     name: "Beacons",
     slug: "beacons",
+    logo: "/landing/logos/beacons.png",
     price: "Free or about $30 a month",
     fee: "9% on the free tier, 0% on paid",
     verdict: "A link page with a store bolted on, plus a media kit and email tools. Broad, but the store is one tab among many.",
@@ -40,6 +43,7 @@ export const COMPETITORS: Record<CompetitorKey, { name: string; slug: string; pr
   gumroad: {
     name: "Gumroad",
     slug: "gumroad",
+    logo: "/landing/logos/gumroad.png",
     price: "Free",
     fee: "10% plus a fixed fee per sale",
     verdict: "The original digital-products checkout. Reliable delivery, no monthly fee, but the highest fee and no bio-link storefront.",

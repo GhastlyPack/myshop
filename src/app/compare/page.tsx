@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
+import { AwningMark } from "@/components/brand/mark";
 import { MarketingShell } from "@/components/landing/shell";
 import { COMPARED_ON, COMPETITORS, MATRIX, type CompetitorKey } from "@/lib/compare";
 
@@ -23,17 +25,27 @@ export default function ComparePage() {
         </div>
 
         {/* verdict cards */}
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {KEYS.map((k) => {
             const c = COMPETITORS[k];
             return (
-              <Link key={k} href={`/compare/${c.slug}`} className="ld-card flex flex-col p-6 transition-colors hover:bg-[var(--ld-tint)]">
-                <div className="text-lg font-semibold">{c.name}</div>
-                <div className="ld-muted mt-1 text-sm">
-                  {c.price} · {c.fee} fee
+              <Link key={k} href={`/compare/${c.slug}`} className="ld-card flex flex-col p-7 transition-colors hover:bg-[var(--ld-tint)]">
+                <div className="flex items-center gap-3">
+                  <Image src={c.logo} alt="" width={36} height={36} className="h-9 w-9 rounded-lg" />
+                  <div className="text-lg font-semibold">{c.name}</div>
                 </div>
-                <p className="mt-4 text-[0.95rem] leading-relaxed">{c.verdict}</p>
-                <span className="ld-muted mt-auto pt-5 text-sm font-medium underline underline-offset-4">Full comparison</span>
+                <dl className="mt-5 space-y-2 text-sm">
+                  <div className="flex gap-3">
+                    <dt className="ld-muted w-12 shrink-0">Price</dt>
+                    <dd>{c.price}</dd>
+                  </div>
+                  <div className="flex gap-3">
+                    <dt className="ld-muted w-12 shrink-0">Fee</dt>
+                    <dd>{c.fee}</dd>
+                  </div>
+                </dl>
+                <p className="mt-5 text-[0.95rem] leading-relaxed">{c.verdict}</p>
+                <span className="mt-auto pt-6 text-sm font-medium text-[var(--ld-orange-ink)]">Full comparison</span>
               </Link>
             );
           })}
@@ -41,14 +53,22 @@ export default function ComparePage() {
 
         {/* matrix */}
         <div className="ld-card mt-16 overflow-x-auto">
-          <table className="ld-table w-full min-w-[900px]">
+          <table className="ld-table ld-table-wide w-full min-w-[960px]">
             <thead>
               <tr>
-                <th scope="col" className="!pl-6" />
-                <th scope="col" className="!text-[var(--ld-orange-ink)]">visitmy.shop</th>
+                <th scope="col" />
+                <th scope="col">
+                  <span className="inline-flex items-center gap-2 text-[var(--ld-orange-ink)]">
+                    <AwningMark width={22} />
+                    visitmy.shop
+                  </span>
+                </th>
                 {KEYS.map((k) => (
                   <th key={k} scope="col">
-                    {COMPETITORS[k].name}
+                    <span className="inline-flex items-center gap-2">
+                      <Image src={COMPETITORS[k].logo} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-md" />
+                      {COMPETITORS[k].name}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -56,7 +76,7 @@ export default function ComparePage() {
             <tbody>
               {MATRIX.map((r) => (
                 <tr key={r.label}>
-                  <th scope="row" className="!pl-6 font-medium">
+                  <th scope="row" className="font-medium">
                     {r.label}
                   </th>
                   <td className="ld-us">{r.us}</td>

@@ -23,8 +23,8 @@ export type Tier = "basic" | "pro";
 export const PRO_FEE_BPS = 0 as const;
 export const BASIC_FEE_BPS = 500 as const; // 5%
 
-/** Full Pro trial length for new signups. */
-export const TRIAL_DAYS = 14;
+/** Full Pro trial length. Card is collected up front; Stripe auto-charges when it ends. */
+export const TRIAL_DAYS = 7;
 
 /** Stripe Price lookup keys — no hardcoded price ids anywhere. */
 export const LOOKUP_KEYS = {
@@ -179,21 +179,28 @@ export async function getOrCreateCustomer(user: Pick<User, "id" | "email" | "nam
 export type BillingCheckoutInput = { user: Pick<User, "id" | "email" | "name">; lookupKey: LookupKey; returnUrl: string };
 
 /**
- * Stripe Checkout Session (mode: subscription) on the platform account. If the
- * user is still inside their app trial and has never had a real Stripe
- * subscription, the remaining trial rides along as `trial_end` so their card
- * isn't charged early; a used trial gets none.
+ * Stripe Checkout Session (mode: subscription) on the platform account. A
+ * first-time subscriber gets a fresh {@link TRIAL_DAYS}-day trial: the card is
+ * collected now, nothing is charged until the trial ends, then Stripe
+ * auto-charges the chosen plan. Anyone who has already had a Stripe
+ * subscription (converted or canceled) subscribes with no trial, so a trial
+ * can't be farmed by resubscribing.
  */
 export async function createBillingCheckout({ user, lookupKey, returnUrl }: BillingCheckoutInput): Promise<string> {
   const row = await ensureRow(user.id);
   if (row.grandfathered) throw new Error("Grandfathered accounts don't need to subscribe.");
   const [customer, price] = await Promise.all([getOrCreateCustomer(user), priceIdForLookupKey(lookupKey)]);
 
-  const now = Date.now();
-  const trialUnused = !row.stripeSubscriptionId && !!row.trialEndsAt && row.trialEndsAt.getTime() > now;
+  const firstSubscription = !row.stripeSubscriptionId;
   const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
     metadata: { userId: user.id },
-    ...(trialUnused ? { trial_end: Math.floor(row.trialEndsAt!.getTime() / 1000) } : {}),
+    ...(firstSubscription
+      ? {
+          trial_period_days: TRIAL_DAYS,
+          // If the card ever falls off during the trial, cancel instead of leaving it running for free.
+          trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+        }
+      : {}),
   };
 
   const stripe = getStripe();
@@ -204,6 +211,8 @@ export async function createBillingCheckout({ user, lookupKey, returnUrl }: Bill
     client_reference_id: user.id,
     metadata: { userId: user.id, lookupKey },
     subscription_data: subscriptionData,
+    // Require a card even for the trial so the plan auto-charges the moment the trial ends.
+    payment_method_collection: "always",
     success_url: `${returnUrl}?billing=success`,
     cancel_url: `${returnUrl}?billing=cancel`,
     allow_promotion_codes: true,
