@@ -43,6 +43,13 @@
       "when": 1789675578602,
       "tag": "0005_cultured_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789676145015,
+      "tag": "0006_cooing_tarantula",
+      "breakpoints": true
     }
   ]
 }

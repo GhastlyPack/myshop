@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * "Instagram kit" for a product with a DM keyword: caption, auto-reply DM text and
  * a story/bio CTA, each copyable. Rendered inside the product editor (Package A).
  */
-export function DmKeywordHelper({ username, slug, keyword, title }: { username: string; slug: string; keyword: string | null; title: string }) {
+export function DmKeywordHelper({ username, slug, keyword, title, replyText }: { username: string; slug: string; keyword: string | null; title: string; replyText?: string | null }) {
   // Base URL comes from the browser (client-side); empty during SSR so the link renders relative.
   const origin = useSyncExternalStore(
     () => () => {},
@@ -32,8 +32,10 @@ export function DmKeywordHelper({ username, slug, keyword, title }: { username: 
     },
     {
       label: "Auto-reply DM",
-      hint: "Send this to everyone who comments the keyword.",
-      text: `Here's ${title}: ${link}`,
+      hint: "Sent automatically when Instagram is connected in Settings.",
+      text: replyText?.trim()
+        ? replyText.replace(/\{\{\s*link\s*\}\}/gi, link).replace(/\{\{\s*title\s*\}\}/gi, title).replace(/\{\{\s*name\s*\}\}/gi, "@theirname") + (replyText.includes("{{link}}") ? "" : `\n${link}`)
+        : `Here's ${title}: ${link}`,
     },
     {
       label: "Story / bio CTA",
@@ -54,7 +56,7 @@ export function DmKeywordHelper({ username, slug, keyword, title }: { username: 
         {blocks.map((b) => (
           <CopyBlock key={b.label} label={b.label} hint={b.hint} text={b.text} />
         ))}
-        <p className="text-xs text-muted-foreground">Auto-replies via Instagram are coming; for now paste this into your DM tool.</p>
+        <p className="text-xs text-muted-foreground">With Instagram connected in Settings, the DM goes out automatically. The caption and CTA are for you to post.</p>
       </CardContent>
     </Card>
   );

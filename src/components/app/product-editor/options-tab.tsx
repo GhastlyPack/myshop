@@ -63,7 +63,7 @@ export function OptionsTab({ form, update, errors, productId, username, slug }: 
             <span className="font-mono">{"{{title}}"}</span> and <span className="font-mono">{"{{name}}"}</span> (their username). Leave empty for the default.
           </FieldHint>
         </Field>
-        <DmKeywordHelper username={username} slug={slug} keyword={form.dmKeyword || null} title={form.title || "Untitled product"} />
+        <DmKeywordHelper username={username} slug={slug} keyword={form.dmKeyword || null} title={form.title || "Untitled product"} replyText={form.dmReplyText || null} />
       </section>
 
       <section className="space-y-3 rounded-xl border border-destructive/40 bg-background p-4 sm:p-5">

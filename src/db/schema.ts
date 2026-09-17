@@ -386,6 +386,19 @@ export const instagramReplies = pgTable(
   (t) => [uniqueIndex("instagram_replies_source_idx").on(t.sourceId), index("instagram_replies_store_idx").on(t.storeId, t.createdAt)],
 );
 
+/** Raw Instagram webhook receipts (summarized), so "did Meta even call us?" has an answer. */
+export const instagramEvents = pgTable(
+  "instagram_events",
+  {
+    id: id(),
+    igUserId: text("ig_user_id"),
+    field: text("field").notNull(), // "comments" | "messages" | "other" | "none"
+    summary: jsonb("summary").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: createdAt(),
+  },
+  (t) => [index("instagram_events_time_idx").on(t.createdAt)],
+);
+
 /** Admin access granted to an email that hasn't signed in yet; applied on first login. */
 export const adminInvites = pgTable(
   "admin_invites",

@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, 
 import { and, eq, isNull } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "@/db";
-import { instagramAccounts, instagramReplies, products, stores, type InstagramAccount, type Product } from "@/db/schema";
+import { instagramAccounts, instagramEvents, instagramReplies, products, stores, type InstagramAccount, type Product } from "@/db/schema";
 import { env, instagramConfigured } from "@/lib/env";
 import { newId } from "@/lib/ids";
 
@@ -164,6 +164,22 @@ export function replyText(product: Pick<Product, "title" | "slug" | "dmReplyText
 export async function handleWebhook(body: WebhookBody) {
   if (!instagramConfigured) return { handled: 0 };
   let handled = 0;
+  // Receipt log (summarized, no message bodies beyond 80 chars) for diagnostics.
+  try {
+    const rows = (body.entry ?? []).map((e) => ({
+      id: newId("ige"),
+      igUserId: e.id,
+      field: e.changes?.length ? "comments" : e.messaging?.length ? "messages" : "other",
+      summary: {
+        comments: (e.changes ?? []).map((c) => ({ field: c.field, id: c.value?.id, from: c.value?.from?.username, text: c.value?.text?.slice(0, 80) })),
+        messages: (e.messaging ?? []).map((m) => ({ from: m.sender?.id, echo: m.message?.is_echo ?? false, text: m.message?.text?.slice(0, 80) })),
+      } as Record<string, unknown>,
+    }));
+    if (rows.length === 0) rows.push({ id: newId("ige"), igUserId: null as unknown as string, field: "none", summary: { object: body.object } as Record<string, unknown> });
+    await db.insert(instagramEvents).values(rows);
+  } catch (e) {
+    console.error("[instagram] receipt log failed", e);
+  }
   for (const entry of body.entry ?? []) {
     const acct = await db.query.instagramAccounts.findFirst({ where: and(eq(instagramAccounts.igUserId, entry.id), eq(instagramAccounts.active, true)) });
     if (!acct) continue;
