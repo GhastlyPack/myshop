@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { productFiles, productLinks, products, reviews, sections, stores } from "@/db/schema";
@@ -25,7 +25,7 @@ export const getPublicStore = unstable_cache(
       db
         .select()
         .from(products)
-        .where(and(eq(products.storeId, store.id), eq(products.status, "published"), eq(products.listed, true)))
+        .where(and(eq(products.storeId, store.id), eq(products.status, "published"), eq(products.listed, true), isNull(products.deletedAt)))
         .orderBy(asc(products.position)),
     ]);
     return { store, sections: secs, products: prods };
@@ -49,7 +49,7 @@ export async function getPublicProduct(username: string, slug: string) {
       const store = await db.query.stores.findFirst({ where: and(eq(stores.username, username.toLowerCase()), eq(stores.published, true)) });
       if (!store) return null;
       const product = await db.query.products.findFirst({
-        where: and(eq(products.storeId, store.id), eq(products.slug, slug.toLowerCase()), eq(products.status, "published")),
+        where: and(eq(products.storeId, store.id), eq(products.slug, slug.toLowerCase()), eq(products.status, "published"), isNull(products.deletedAt)),
       });
       if (!product) return null;
       const [files, links, approvedReviews] = await Promise.all([
@@ -69,7 +69,7 @@ export async function getPublicProduct(username: string, slug: string) {
 export async function getStoreEditorData(storeId: string) {
   const [secs, prods, files] = await Promise.all([
     db.select().from(sections).where(eq(sections.storeId, storeId)).orderBy(asc(sections.position)),
-    db.select().from(products).where(eq(products.storeId, storeId)).orderBy(asc(products.position)),
+    db.select().from(products).where(and(eq(products.storeId, storeId), isNull(products.deletedAt))).orderBy(asc(products.position)),
     db
       .select({ id: productFiles.id, productId: productFiles.productId, filename: productFiles.filename, bytes: productFiles.bytes })
       .from(productFiles)

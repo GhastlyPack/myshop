@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireStore } from "@/lib/auth";
-import { formatDate, formatMoney } from "@/lib/payments/money";
+import { formatMoney } from "@/lib/payments/money";
+import { LocalTime } from "@/components/local-time";
 import { countCustomers, listCustomers } from "@/lib/payments/reports";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +81,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                       <div className="truncate font-medium">{c.name || "—"}</div>
                       <div className="truncate text-xs text-muted-foreground">{c.email}</div>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(c.firstSeen)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground"><LocalTime date={c.firstSeen} mode="date" /></TableCell>
                     <TableCell className="text-right tabular-nums">{c.ordersCount}</TableCell>
                     <TableCell className="whitespace-nowrap text-right tabular-nums">
                       {c.totalSpentCents > 0 ? formatMoney(c.totalSpentCents, store.currency) : <span className="text-muted-foreground">Free</span>}

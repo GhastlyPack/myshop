@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { productFiles, productLinks, products, sections } from "@/db/schema";
 import { ProductEditor } from "@/components/app/product-editor/editor";
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Edit product" };
 export default async function ProductEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { store } = await requireStore();
-  const product = await db.query.products.findFirst({ where: and(eq(products.id, id), eq(products.storeId, store.id)) });
+  const product = await db.query.products.findFirst({ where: and(eq(products.id, id), eq(products.storeId, store.id), isNull(products.deletedAt)) });
   if (!product) notFound();
   const [files, links, secs] = await Promise.all([
     db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),

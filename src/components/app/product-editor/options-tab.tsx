@@ -54,7 +54,7 @@ export function OptionsTab({ form, update, errors, productId, username, slug }: 
       <section className="space-y-3 rounded-xl border border-destructive/40 bg-background p-4 sm:p-5">
         <div>
           <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
-          <p className="text-xs text-muted-foreground">Deleting removes the product, its files and its links. Past buyers lose access.</p>
+          <p className="text-xs text-muted-foreground">Deleting hides the product from your store and dashboard. Sales history stays in Income and past buyers keep their downloads.</p>
         </div>
         <Button type="button" variant="destructive" size="sm" onClick={() => setConfirm(true)}>
           Delete product
@@ -65,7 +65,7 @@ export function OptionsTab({ form, update, errors, productId, username, slug }: 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete &ldquo;{form.title || "Untitled product"}&rdquo;?</DialogTitle>
-            <DialogDescription>This cannot be undone. Files are removed from storage and existing download links stop working.</DialogDescription>
+            <DialogDescription>The product disappears from your store and this list. Orders, customer records and existing download links are kept.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirm(false)} disabled={pending}>

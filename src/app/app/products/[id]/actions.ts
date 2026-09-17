@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -13,7 +13,7 @@ import { revalidateStore } from "@/lib/queries";
 import { deleteObject } from "@/lib/storage";
 
 async function ownProduct(id: string, storeId: string) {
-  return db.query.products.findFirst({ where: and(eq(products.id, String(id)), eq(products.storeId, storeId)) });
+  return db.query.products.findFirst({ where: and(eq(products.id, String(id)), eq(products.storeId, storeId), isNull(products.deletedAt)) });
 }
 
 /**
@@ -189,18 +189,19 @@ export async function deleteProductFile(productId: string, fileId: string): Prom
   return { ok: true };
 }
 
-/** Deletes the product, its rows (cascade) and every stored object. */
+/**
+ * Archives the product. It vanishes from the storefront and dashboard, but the row,
+ * its files, and every order/entitlement stay, so sales history is intact and buyers
+ * keep their downloads. The slug is released so the creator can reuse it.
+ */
 export async function deleteProduct(id: string): Promise<never | { ok: false; error: string }> {
   const { store } = await requireStore();
   const product = await ownProduct(id, store.id);
   if (!product) return { ok: false, error: "Product not found." };
-  const files = await db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position));
-  await db.delete(products).where(eq(products.id, product.id));
-  await Promise.all([
-    ...files.map((f) => deleteObject("files", f.storageKey).catch(() => {})),
-    product.thumbnailKey ? deleteObject("public", product.thumbnailKey).catch(() => {}) : Promise.resolve(),
-    product.bannerKey ? deleteObject("public", product.bannerKey).catch(() => {}) : Promise.resolve(),
-  ]);
+  await db
+    .update(products)
+    .set({ deletedAt: new Date(), status: "draft", listed: false, slug: `${product.slug}--archived-${Date.now().toString(36)}` })
+    .where(eq(products.id, product.id));
   revalidateStore(store.username);
   revalidatePath("/app");
   redirect("/app");

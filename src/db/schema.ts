@@ -139,6 +139,8 @@ export const products = pgTable(
     confirmationBody: text("confirmation_body"),
     status: productStatus("status").notNull().default("draft"),
     position: integer("position").notNull().default(0),
+    /** Archived (soft-deleted). Hidden everywhere, but orders, entitlements and files stay so buyers keep access. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

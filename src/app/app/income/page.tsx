@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { requireStore } from "@/lib/auth";
 import { stripeConfigured } from "@/lib/env";
 import { getStripeAccount } from "@/lib/payments/checkout";
-import { formatDateTime, formatMoney } from "@/lib/payments/money";
+import { formatMoney } from "@/lib/payments/money";
+import { LocalTime } from "@/components/local-time";
 import { incomeSummary, listOrders, ORDER_STATUSES, parseStatus, type OrderStatus } from "@/lib/payments/reports";
 import { cn } from "@/lib/utils";
 import { refundOrderAction } from "./actions";
@@ -101,7 +102,7 @@ export default async function IncomePage({
               <TableBody>
                 {rows.map((o) => (
                   <TableRow key={o.id}>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">{formatDateTime(o.createdAt)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground"><LocalTime date={o.createdAt} /></TableCell>
                     <TableCell className="max-w-[16rem] truncate font-medium">{o.productTitle}</TableCell>
                     <TableCell>
                       <div className="truncate">{o.buyerName || "—"}</div>

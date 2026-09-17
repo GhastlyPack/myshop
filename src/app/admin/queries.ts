@@ -10,7 +10,7 @@ export async function getAdminOverview() {
   const [[u], [s], [p], [o], [f], [e], recentSignups, topStores] = await Promise.all([
     db.select({ n: int(sql`count(*)`) }).from(users),
     db.select({ n: int(sql`count(*)`), published: int(sql`count(*) filter (where ${stores.published})`) }).from(stores),
-    db.select({ n: int(sql`count(*)`), published: int(sql`count(*) filter (where ${products.status} = 'published')`) }).from(products),
+    db.select({ n: int(sql`count(*) filter (where ${products.deletedAt} is null)`), published: int(sql`count(*) filter (where ${products.status} = 'published' and ${products.deletedAt} is null)`) }).from(products),
     db
       .select({ n: int(sql`count(*)`), revenueCents: int(sql`coalesce(sum(${orders.amountCents}), 0)`) })
       .from(orders)
@@ -60,7 +60,7 @@ export async function getAdminOverview() {
 export async function listStores(q: string) {
   const term = q.trim();
   const productCount = db
-    .select({ storeId: products.storeId, productCount: sql<number>`count(*)::int`.as("product_count") })
+    .select({ storeId: products.storeId, productCount: sql<number>`count(*) filter (where ${products.deletedAt} is null)::int`.as("product_count") })
     .from(products)
     .groupBy(products.storeId)
     .as("pc");
