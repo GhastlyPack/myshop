@@ -72,10 +72,12 @@ export function ThemeCards() {
                     </span>
                   </div>
                   <div className="sf-card">
-                    <span className="flex h-full flex-col gap-1.5 p-2.5">
+                    <span className="sf-thumb block aspect-square">
+                      <Image src={`/landing/stores/${s.img}-thumb2.jpg`} alt="" width={240} height={240} className="h-full w-full object-cover" />
+                    </span>
+                    <span className="flex flex-col gap-1.5 p-2.5">
                       <span className="sf-heading text-[0.74rem] leading-tight">{p2.title}</span>
                       <span className="text-[0.74rem] font-semibold">{p2.price}</span>
-                      <span className="flex-1" />
                       <Cta small />
                     </span>
                   </div>
