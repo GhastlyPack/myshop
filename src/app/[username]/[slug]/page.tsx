@@ -4,6 +4,8 @@ import Markdown from "react-markdown";
 import { ArrowUpRight } from "lucide-react";
 import { CheckoutForm, type BumpOffer } from "@/components/storefront/checkout-form";
 import { StoreFooter } from "@/components/storefront/footer";
+import { StickyBuyBar } from "@/components/storefront/sticky-buy-bar";
+import { Collapsible } from "@/components/storefront/collapsible";
 import { resolveStoreTheme } from "@/components/storefront/preview-theme";
 import { formatPrice } from "@/components/storefront/price";
 import { Stars } from "@/components/storefront/stars";
@@ -179,7 +181,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
 
           {product.description && (
             <div className="sf-prose mt-7">
-              <Markdown>{product.description}</Markdown>
+              {product.description.length > 320 ? (
+                <Collapsible lines={4}>
+                  <Markdown>{product.description}</Markdown>
+                </Collapsible>
+              ) : (
+                <Markdown>{product.description}</Markdown>
+              )}
             </div>
           )}
 
@@ -260,6 +268,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         )}
 
         <StoreFooter show={theme.showBranding} />
+        {!isLink && !soldOut && <StickyBuyBar price={formatPrice(product.priceCents, product.currency)} label={product.buttonText} />}
       </main>
     </ThemeRoot>
   );

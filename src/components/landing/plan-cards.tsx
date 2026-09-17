@@ -18,7 +18,7 @@ export function PlanCards({ ctaHref }: { ctaHref: string }) {
             <div key={p.key} className={`flex flex-col rounded-2xl border p-7 sm:p-9 ${dark ? "border-transparent bg-[var(--ld-ink)] text-white" : "border-[var(--ld-line)] bg-white"}`}>
               <div className="flex items-center justify-between gap-4">
                 <h3 className="text-2xl font-semibold tracking-tight">{p.name}</h3>
-                {dark && <span className="rounded-full bg-[var(--ld-orange)] px-3 py-1 text-xs font-semibold text-white">Most creators</span>}
+                {dark && <span className="rounded-full bg-[var(--ld-orange)] px-3 py-1 text-xs font-semibold text-white">Recommended</span>}
               </div>
               <p className={`mt-1.5 text-[0.95rem] ${muted}`}>{p.tagline}</p>
 

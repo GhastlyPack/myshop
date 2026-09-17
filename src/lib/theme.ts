@@ -54,6 +54,18 @@ export function resolveTheme(theme: Theme | null | undefined): ResolvedTheme {
 
 export const THEME_PRESETS: Record<string, { label: string; theme: Theme }> = {
   clean: { label: "Clean", theme: {} },
+  paper: {
+    label: "Paper",
+    theme: {
+      colors: { bg: "#f1f4f8", surface: "#ffffff", text: "#111111", muted: "#667085", accent: "#c2410c", accentText: "#ffffff" },
+      headingFont: "fraunces",
+      bodyFont: "dmsans",
+      buttonShape: "pill",
+      cardShape: "soft",
+      cardBorder: true,
+      cardShadow: false,
+    },
+  },
   midnight: {
     label: "Midnight",
     theme: {
@@ -79,7 +91,7 @@ export const THEME_PRESETS: Record<string, { label: string; theme: Theme }> = {
   sunset: {
     label: "Sunset",
     theme: {
-      colors: { bg: "#fff7ed", surface: "#ffffff", text: "#1f1410", muted: "#7c5a4a", accent: "#ea580c", accentText: "#ffffff" },
+      colors: { bg: "#fff7ed", surface: "#ffffff", text: "#1f1410", muted: "#7c5a4a", accent: "#c2410c", accentText: "#ffffff" },
       bgGradient: "linear-gradient(180deg, #fff1e6 0%, #ffe4d6 100%)",
       headingFont: "fraunces",
       bodyFont: "dmsans",

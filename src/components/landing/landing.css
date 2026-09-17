@@ -11,6 +11,8 @@
     --ld-tint: #f1f4f8;
     --ld-orange: #f4611e;
     --ld-orange-deep: #d94f12;
+    --ld-orange-ink: #c2410c; /* 5.2:1 on white: buttons and links */
+    --ld-orange-ink-hover: #a3360a;
     --ld-muted: #667085;
     --ld-line: #dde3ec;
     background: var(--ld-tint);
@@ -64,11 +66,11 @@
     font-size: 0.875rem;
   }
   .ld-btn-primary {
-    background: var(--ld-orange);
+    background: var(--ld-orange-ink);
     color: #fff;
   }
   .ld-btn-primary:hover {
-    background: var(--ld-orange-deep);
+    background: var(--ld-orange-ink-hover);
   }
   .ld-btn-ink {
     background: var(--ld-ink);
@@ -189,7 +191,7 @@
     color: rgb(255 255 255 / 0.62);
   }
   .ld-orange-band {
-    background: var(--ld-orange);
+    background: var(--ld-orange-ink);
     color: #fff;
   }
   .ld-orange-band .ld-claim {
@@ -268,7 +270,7 @@
     margin-top: 0.4em;
   }
   .ld-prose a {
-    color: var(--ld-orange-deep);
+    color: var(--ld-orange-ink);
     text-decoration: underline;
     text-underline-offset: 3px;
   }

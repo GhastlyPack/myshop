@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Wordmark } from "@/components/brand/wordmark";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { ArrowUpRight, Download, LogOut, Star } from "lucide-react";
 import { db } from "@/db";
@@ -57,9 +58,11 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
 
   if (!email) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12" style={FONT}>
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-12" style={{ ...FONT, background: "#f1f4f8" }}>
         <div className="mb-6 text-center">
-          <p className="text-xs font-medium tracking-widest text-neutral-500 uppercase">visitmy.shop</p>
+          <Link href="/" aria-label="visitmy.shop home" className="inline-flex">
+            <Wordmark size={20} />
+          </Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Your downloads</h1>
           <p className="mt-2 text-neutral-600">Everything you&apos;ve picked up from any creator, in one place.</p>
         </div>
@@ -70,11 +73,14 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
 
   const library = await loadLibrary(email);
   return (
-    <main className="mx-auto w-full max-w-2xl px-5 py-10 sm:py-14" style={FONT}>
+    <main className="min-h-dvh w-full" style={{ ...FONT, background: "#f1f4f8" }}>
+      <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:py-14">
       <GaEvent name="library_open" params={{ stores: library.length, items: library.reduce((n, s) => n + s.items.length, 0) }} user={{ user_role: "buyer" }} />
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-medium tracking-widest text-neutral-500 uppercase">visitmy.shop</p>
+          <Link href="/" aria-label="visitmy.shop home" className="inline-flex">
+            <Wordmark size={20} />
+          </Link>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Your downloads</h1>
           <p className="mt-1 text-sm text-neutral-600">{email}</p>
         </div>
@@ -86,7 +92,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
       </header>
 
       {library.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center text-neutral-600">
+        <div className="rounded-2xl border border-dashed border-[#dde3ec] bg-white p-10 text-center text-neutral-600">
           <p>Nothing here yet for {email}.</p>
           <p className="mt-1 text-sm">Downloads show up here the moment you claim or buy something with this email.</p>
         </div>
@@ -108,7 +114,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
                 </Link>
                 <ul className="space-y-3">
                   {items.map((it) => (
-                    <li key={it.ent.id} className="rounded-2xl border bg-white p-5 shadow-sm">
+                    <li key={it.ent.id} className="rounded-2xl border border-[#dde3ec] bg-white p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <Link href={`/${store.username}/${it.product.slug}`} className="font-semibold hover:underline">
@@ -162,6 +168,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
           })}
         </div>
       )}
+      </div>
     </main>
   );
 }

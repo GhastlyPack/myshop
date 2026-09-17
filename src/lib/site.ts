@@ -9,6 +9,8 @@ export const SITE = {
   email: "hello@visitmy.shop",
   /** Official profiles, used as schema.org sameAs. Fill in as they are claimed. */
   profiles: ["https://www.instagram.com/visitmy.shop"] as string[],
+  /** One real creator quote for the lander. Leave null until you have one; nothing fake is rendered. */
+  testimonial: null as null | { text: string; name: string; username: string },
 };
 
 export const absoluteUrl = (path: string) => `${SITE.url}${path.startsWith("/") ? path : `/${path}`}`;

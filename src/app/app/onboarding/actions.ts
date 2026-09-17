@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { THEME_PRESETS } from "@/lib/theme";
 import { z } from "zod";
 import { db } from "@/db";
 import { stores, subscriptions } from "@/db/schema";
@@ -53,7 +54,7 @@ export async function createStore(input: z.input<typeof createSchema>): Promise<
       username,
       displayName: parsed.data.displayName,
       bio: parsed.data.bio || null,
-      theme: {},
+      theme: { preset: "paper", ...THEME_PRESETS.paper.theme }, // distinctive from day one; the design page is the next stop
     });
   } catch {
     // unique index on username or user_id

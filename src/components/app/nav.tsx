@@ -88,7 +88,7 @@ function UserFooter({ user, logoutHref }: Pick<NavProps, "user" | "logoutHref">)
 /** Desktop sidebar (sm and up). */
 export function AppNav({ user, store, logoutHref }: NavProps) {
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r bg-background sm:flex">
+    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-[#dde3ec] bg-white sm:flex">
       <div className="px-5 py-5">
         <Link href="/app" className="inline-flex" aria-label="visitmy.shop">
           <Wordmark size={18} />

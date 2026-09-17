@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     logoutHref: logoutPath(),
   };
   return (
-    <div className="flex min-h-dvh flex-col bg-muted/30 sm:flex-row">
+    <div className="flex min-h-dvh flex-col bg-[#f1f4f8] sm:flex-row">
       <GaEvent name="login" session="login" params={{ method: "auth0", has_store: Boolean(store) }} user={{ user_role: user.role, has_store: Boolean(store) }} />
       <MobileNav {...navProps} />
       <AppNav {...navProps} />

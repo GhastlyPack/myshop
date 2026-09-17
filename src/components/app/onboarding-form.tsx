@@ -71,8 +71,8 @@ export function OnboardingForm({ suggestedUsername, suggestedName }: { suggested
       }
       ga("sign_up", { method: "auth0" });
       ga("store_created", { username: normalized, has_avatar: Boolean(avatar), has_bio: Boolean(bio) });
-      toast.success("Your store is live.");
-      router.replace("/app");
+      toast.success("Your store is live. Make it look like you.");
+      router.replace("/app/design");
       router.refresh();
     });
   }

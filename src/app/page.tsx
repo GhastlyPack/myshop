@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Wordmark } from "@/components/brand/wordmark";
 import { ClaimForm } from "@/components/landing/claim-form";
-import { CheckoutMock, EditorMock, IncomeMock } from "@/components/landing/feature-mockups";
 import { MarketingFooter } from "@/components/landing/footer";
 import { manrope } from "@/components/landing/fonts";
 import { LandingNav } from "@/components/landing/nav";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, SITE } from "@/lib/site";
 import { HeroPhone } from "@/components/landing/phone";
-import { PlanCards } from "@/components/landing/plan-cards";
+import { COMPETITORS, PLANS } from "@/lib/plans";
+import { ProofStrip } from "@/components/landing/proof-strip";
+import Image from "next/image";
 import { ThemeCards } from "@/components/landing/theme-cards";
 import { getCurrentUser, loginPath } from "@/lib/auth";
 import "@/components/storefront/storefront.css";
@@ -21,43 +21,13 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const ROWS = [
-  {
-    mock: EditorMock,
-    title: "Live in five minutes.",
-    body: "Claim your link, pick a theme, drag in a file. Set a price or make it free. Your store is at visitmy.shop/you before the coffee gets cold. No code, no plugins, nothing to install.",
-  },
-  {
-    mock: CheckoutMock,
-    title: "A checkout that respects a $9 PDF.",
-    body: "Name and email for a free download. Card for a paid one. No mailing address, no captcha, no three checkboxes. The file lands in seconds and stays in the buyer’s library for good.",
-    flip: true,
-  },
-  {
-    mock: IncomeMock,
-    title: "Your money goes to your Stripe.",
-    body: "Connect your own Stripe account once. Buyers pay you directly, we never hold your balance, and every product shows you the number you keep.",
-  },
-];
-
 const FEATURES = [
-  ["Any product, free or paid", "A lead magnet or a $39 manual, listed on your store or hidden as its own landing page. Files, links, companion skills."],
+  ["Any product, free or paid", "A lead magnet or a $39 manual, listed on your store or hidden as its own landing page."],
   ["Clean product links", "visitmy.shop/you/my-guide. No random numbers stapled to the end."],
   ["Reviews from buyers", "After the download, buyers rate it and leave a line. You approve what shows."],
   ["A library for your buyers", "Everything they’ve ever bought, from every creator, behind one magic link at visitmy.shop/me."],
   ["Analytics", "Views, clicks per card, conversions, and where the traffic came from. Meta, Google, and TikTok pixels on Pro."],
   ["Instagram DM keyword", "Give a product a keyword and get the caption, the auto-reply, and the story CTA, ready to paste. Auto-replies on Pro."],
-];
-
-const COMPARE = [
-  ["Price", "$9 Basic, $49 Pro", "$29, $99", "Free, paid tiers"],
-  ["Fee on sales", "5% Basic, 0% Pro", "0%", "Yes on commerce tiers"],
-  ["Fonts, layouts, backgrounds", "Full control", "Theme and two colors", "Limited"],
-  ["Product URLs", "visitmy.shop/you/my-guide", "Numeric suffix", "None"],
-  ["Buyer download library", "Yes", "No", "No"],
-  ["Reviews collected from buyers", "Yes", "No", "No"],
-  ["A free download asks for", "Name and email", "Full mailing address", "n/a"],
-  ["Pixel tracking", "Pro, $49", "$99 plan", "Paid plan"],
 ];
 
 export default async function Home() {
@@ -80,9 +50,9 @@ export default async function Home() {
 
       {/* ---------- hero ---------- */}
       <section>
-        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pt-16 pb-20 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:pt-24 lg:pb-28">
+        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pt-16 pb-20 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8 lg:pt-28 lg:pb-32">
           <div>
-            <h1 className="ld-heading text-[2.9rem] sm:text-[3.8rem] lg:text-[4.4rem]">
+            <h1 className="ld-heading text-[3rem] sm:text-[4rem] lg:text-[5rem]">
               Your bio link, <br className="hidden sm:block" />
               but it <span className="ld-orange">actually sells.</span>
             </h1>
@@ -112,26 +82,38 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- feature rows ---------- */}
-      <section className="border-t ld-line bg-white">
-        <div className="mx-auto max-w-6xl space-y-20 px-5 py-20 sm:px-8 lg:space-y-28 lg:py-28">
-          {ROWS.map((row) => (
-            <div key={row.title} className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${row.flip ? "lg:[&>*:first-child]:order-2" : ""}`}>
-              <div className="min-w-0">
-                <row.mock />
-              </div>
-              <div>
-                <h2 className="ld-heading text-[2.2rem] sm:text-[2.8rem]">{row.title}</h2>
-                <p className="ld-muted mt-5 max-w-lg text-lg leading-relaxed">{row.body}</p>
-              </div>
-            </div>
-          ))}
+      <ProofStrip />
+
+      {/* ---------- first five minutes: real screenshots ---------- */}
+      <section className="ld-ink">
+        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
+          <div className="max-w-2xl">
+            <h2 className="ld-heading text-[2.4rem] sm:text-[3.4rem]">Your first five minutes.</h2>
+            <p className="ld-muted mt-5 text-lg leading-relaxed">Real screens from a real store on visitmy.shop, not mockups. Claim a link, upload a file, and this is what your buyers see.</p>
+          </div>
+          <div className="mt-14 grid gap-10 sm:grid-cols-3 sm:gap-6">
+            {[
+              { src: "/landing/shots/store.jpg", t: "Your store", b: "One link. Your name, your products, your theme. Live at visitmy.shop/you." },
+              { src: "/landing/shots/product.jpg", t: "A product page", b: "Title, price, cover, a few bullets, and reviews from real buyers." },
+              { src: "/landing/shots/checkout.jpg", t: "Checkout", b: "Name and email for a free download. Card for a paid one. File lands in seconds." },
+            ].map((s, i) => (
+              <figure key={s.t}>
+                <div className="mx-auto w-[260px] rounded-[40px] bg-[#0f0f10] p-2.5">
+                  <Image src={s.src} alt={s.t} width={780} height={1688} className="w-full rounded-[32px]" sizes="260px" priority={i === 0} />
+                </div>
+                <figcaption className="mt-6 text-center sm:text-left">
+                  <div className="text-lg font-semibold">{s.t}</div>
+                  <p className="ld-muted mt-1.5 text-[0.95rem] leading-relaxed">{s.b}</p>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ---------- feature list ---------- */}
-      <section id="features" className="scroll-mt-20 border-t ld-line">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
+      <section id="features" className="scroll-mt-20 bg-white">
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
           <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
             <div>
               <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">What you get.</h2>
@@ -167,60 +149,34 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- pricing ---------- */}
-      <section id="pricing" className="scroll-mt-20 border-t ld-line">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
-          <div className="max-w-2xl">
-            <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">Start at $9. Keep up to 100%.</h2>
-            <p className="ld-muted mt-5 text-lg leading-relaxed">
-              Basic keeps 95% of each sale. When your sales grow, Pro pays for itself by dropping the fee to zero. Stan charges $29 and $99; we cut
-              that in half and let you keep 100% of your sales on Pro.
-            </p>
-          </div>
-          <div className="mt-12">
-            <PlanCards ctaHref={user ? "/app" : loginHref} />
-          </div>
-          <Link href="/pricing" className="ld-btn ld-btn-ghost mt-8">
-            Full pricing details
-          </Link>
-        </div>
-      </section>
-
-      {/* ---------- compare ---------- */}
-      <section id="compare" className="scroll-mt-20 border-t ld-line">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
-          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+      {/* ---------- pricing teaser ---------- */}
+      <section id="pricing" className="scroll-mt-20 bg-white">
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
+          <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-16">
             <div>
-              <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">How it compares.</h2>
-              <p className="ld-muted mt-5 max-w-md text-lg leading-relaxed">Courses, bookings, and communities coming soon. Today we do the bio-link store better than anyone.</p>
-              <p className="ld-muted mt-5 text-sm">Compared against published plans, September 2026.</p>
+              <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">Start at $9. Keep up to 100%.</h2>
+              <p className="ld-muted mt-5 text-lg leading-relaxed">
+                Basic is ${PLANS[0].monthly} a month and keeps 95% of each sale. Pro is ${PLANS[1].monthly} a month with a 0% fee, the full design editor,
+                Instagram auto-replies, and pixels. Stan charges ${COMPETITORS.stan.entry} and ${COMPETITORS.stan.top}. Every account starts with 14 days of Pro, no card required.
+              </p>
+              <Link href="/pricing" className="ld-btn ld-btn-primary mt-8">
+                See pricing
+              </Link>
             </div>
-            <div className="overflow-x-auto">
-              <table className="ld-table w-full min-w-[560px]">
-                <thead>
-                  <tr>
-                    <th scope="col" />
-                    <th scope="col">
-                      <Wordmark size={15} />
-                    </th>
-                    <th scope="col">Stan</th>
-                    <th scope="col">Linktree</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COMPARE.map(([label, us, stan, linktree]) => (
-                    <tr key={label}>
-                      <th scope="row" className="font-medium">
-                        {label}
-                      </th>
-                      <td className="ld-us">{us}</td>
-                      <td>{stan}</td>
-                      <td>{linktree}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <dl className="divide-y ld-line rounded-2xl border ld-line">
+              {PLANS.map((p) => (
+                <div key={p.key} className="flex items-baseline justify-between gap-4 px-6 py-5">
+                  <div>
+                    <dt className="text-lg font-semibold">{p.name}</dt>
+                    <dd className="ld-muted text-sm">{p.feePercent ? `${p.feePercent}% fee, keep ${100 - p.feePercent}%` : "0% fee, keep 100%"}</dd>
+                  </div>
+                  <div className="text-right">
+                    <div className="ld-heading text-[2rem]">${p.monthly}</div>
+                    <div className="ld-muted text-xs">per month · ${p.annual}/yr</div>
+                  </div>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
       </section>

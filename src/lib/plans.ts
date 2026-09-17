@@ -50,6 +50,12 @@ export const PLANS: Plan[] = [
 /** Planned for Pro, not shipped. Always labelled coming soon. */
 export const ROADMAP = ["Memberships and community access", "Courses", "Bookings", "Affiliate program"];
 
+/** Competitor list prices, quoted on the lander, /pricing, and the compare pages. Checked September 2026. */
+export const COMPETITORS = {
+  stan: { name: "Stan", entry: 29, top: 99, fee: "0%" },
+  linktree: { name: "Linktree", entry: 0, top: 24, fee: "on commerce tiers" },
+};
+
 export const TRIAL = "14-day free trial with full Pro access. No card required.";
 
 export const keepPercent = (p: Plan) => 100 - p.feePercent;

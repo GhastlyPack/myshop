@@ -41,7 +41,9 @@ export function ThemeCards() {
     <>
       <link rel="stylesheet" href={presetFontsHref()} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Object.entries(THEME_PRESETS).map(([key, preset]) => {
+        {Object.entries(THEME_PRESETS)
+          .filter(([key]) => key in STORES)
+          .map(([key, preset]) => {
           const t = resolveTheme(preset.theme);
           const vars = themeToCssVars(t) as CSSProperties;
           const s = STORES[key];
