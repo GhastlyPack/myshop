@@ -132,6 +132,15 @@ export async function publicReplyToComment(token: string, commentId: string, tex
   await graph(`/${commentId}/replies`, { method: "POST", token, query: { message: text } });
 }
 
+/** Cut at a word boundary under `max` chars, with an ellipsis (Instagram hard-limits card text). */
+export function trimWords(text: string, max: number) {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  const atSpace = cut.lastIndexOf(" ");
+  return `${(atSpace > max * 0.5 ? cut.slice(0, atSpace) : cut).replace(/[,;:.\-–]+$/, "")}…`;
+}
+
 /** Product card (generic template): image, title, price line, one "Get it" button. */
 export async function sendProductCard(
   igUserId: string,
@@ -140,8 +149,8 @@ export async function sendProductCard(
   card: { title: string; subtitle: string; imageUrl: string | null; url: string; button: string },
 ) {
   const element: Record<string, unknown> = {
-    title: card.title.slice(0, 80),
-    subtitle: card.subtitle.slice(0, 80),
+    title: trimWords(card.title, 80),
+    subtitle: trimWords(card.subtitle, 80),
     default_action: { type: "web_url", url: card.url },
     buttons: [{ type: "web_url", url: card.url, title: card.button.slice(0, 20) }],
   };
