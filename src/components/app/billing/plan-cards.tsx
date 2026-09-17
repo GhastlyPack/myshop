@@ -21,11 +21,33 @@ function usd(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
-function Card({ tier, interval, currentTier, trialing }: { tier: Tier; interval: "month" | "year"; currentTier: Tier; trialing: boolean }) {
+function Card({
+  tier,
+  interval,
+  currentTier,
+  trialing,
+  trialAvailable,
+}: {
+  tier: Tier;
+  interval: "month" | "year";
+  currentTier: Tier;
+  trialing: boolean;
+  trialAvailable: boolean;
+}) {
   const price = PRICES[tier][interval];
   const isCurrent = !trialing && currentTier === tier;
+  // A first-time Pro subscriber gets the card-backed 7-day trial; everyone else subscribes straight away.
+  const proTrial = tier === "pro" && trialAvailable && !isCurrent;
   // While trialing (effective Pro), the Pro card is a "continue"; Basic is a downgrade.
-  const label = isCurrent ? "Current plan" : tier === "pro" ? (currentTier === "pro" && trialing ? "Continue on Pro" : "Upgrade to Pro") : "Switch to Basic";
+  const label = isCurrent
+    ? "Current plan"
+    : tier === "pro"
+      ? currentTier === "pro" && trialing
+        ? "Continue on Pro"
+        : proTrial
+          ? "Start 7-day free trial"
+          : "Upgrade to Pro"
+      : "Switch to Basic";
   return (
     <div className={cn("flex flex-col rounded-xl border bg-background p-5", tier === "pro" && "border-foreground/30 ring-1 ring-foreground/10")}>
       <div className="flex items-center justify-between">
@@ -48,11 +70,14 @@ function Card({ tier, interval, currentTier, trialing }: { tier: Tier; interval:
       <Button asChild className="mt-5 w-full" variant={tier === "pro" ? "default" : "outline"} disabled={isCurrent}>
         {isCurrent ? <span>Current plan</span> : <a href={`/api/billing/checkout?plan=${tier}&interval=${interval}`}>{label}</a>}
       </Button>
+      {proTrial && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">Card required. Nothing charged until day 7. Cancel anytime.</p>
+      )}
     </div>
   );
 }
 
-export function PlanCards({ currentTier, trialing }: { currentTier: Tier; trialing: boolean }) {
+export function PlanCards({ currentTier, trialing, trialAvailable = false }: { currentTier: Tier; trialing: boolean; trialAvailable?: boolean }) {
   const [interval, setInterval] = useState<"month" | "year">("month");
   return (
     <div className="space-y-4">
@@ -73,8 +98,8 @@ export function PlanCards({ currentTier, trialing }: { currentTier: Tier; triali
         </button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card tier="basic" interval={interval} currentTier={currentTier} trialing={trialing} />
-        <Card tier="pro" interval={interval} currentTier={currentTier} trialing={trialing} />
+        <Card tier="basic" interval={interval} currentTier={currentTier} trialing={trialing} trialAvailable={trialAvailable} />
+        <Card tier="pro" interval={interval} currentTier={currentTier} trialing={trialing} trialAvailable={trialAvailable} />
       </div>
     </div>
   );

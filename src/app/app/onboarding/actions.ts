@@ -5,9 +5,8 @@ import { redirect } from "next/navigation";
 import { THEME_PRESETS } from "@/lib/theme";
 import { z } from "zod";
 import { db } from "@/db";
-import { stores, subscriptions } from "@/db/schema";
+import { stores } from "@/db/schema";
 import { getCurrentStore, requireUser } from "@/lib/auth";
-import { TRIAL_DAYS } from "@/lib/billing";
 import { newId } from "@/lib/ids";
 import { revalidateStore } from "@/lib/queries";
 import { normalizeUsername, usernameError } from "@/lib/reserved";
@@ -60,19 +59,9 @@ export async function createStore(input: z.input<typeof createSchema>): Promise<
     // unique index on username or user_id
     return { ok: false, errors: { username: "That username is taken." } };
   }
-  // New signups get 14 days of full Pro (0% fee), then fall to Basic terms if they don't subscribe.
-  await db
-    .insert(subscriptions)
-    .values({
-      id: newId("sub"),
-      userId: user.id,
-      plan: "pro",
-      interval: "month",
-      status: "trialing",
-      grandfathered: false,
-      trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
-    })
-    .onConflictDoNothing({ target: subscriptions.userId });
+  // New signups start on Basic terms (5% fee). Their 7-day Pro trial is card-backed:
+  // it starts through Stripe Checkout (see createBillingCheckout) so the plan
+  // auto-charges when the trial ends. No free, card-free Pro period is granted here.
   revalidateStore(username);
   return { ok: true };
 }

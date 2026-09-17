@@ -92,9 +92,9 @@ export default async function Home() {
           </div>
           <div className="mt-14 grid gap-10 sm:grid-cols-3 sm:gap-6">
             {[
-              { src: "/landing/shots/store.jpg", t: "Your store", b: "One link. Your name, your products, your theme. Live at visitmy.shop/you." },
-              { src: "/landing/shots/product.jpg", t: "A product page", b: "Title, price, cover, a few bullets, and reviews from real buyers." },
-              { src: "/landing/shots/checkout.jpg", t: "Checkout", b: "Name and email for a free download. Card for a paid one. File lands in seconds." },
+              { src: "/landing/shots/store-2.jpg", t: "Your store", b: "One link. Your name, your products, your theme. Live at visitmy.shop/you." },
+              { src: "/landing/shots/product-2.jpg", t: "A product page", b: "Title, price, cover, a few bullets, and reviews from real buyers." },
+              { src: "/landing/shots/checkout-2.jpg", t: "Checkout", b: "Name and email for a free download. Card for a paid one. File lands in seconds." },
             ].map((s, i) => (
               <figure key={s.t}>
                 <div className="mx-auto w-[260px] rounded-[40px] bg-[#0f0f10] p-2.5">

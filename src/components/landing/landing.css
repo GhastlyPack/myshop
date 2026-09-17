@@ -235,6 +235,17 @@
   .ld-table-wide tr > *:last-child {
     padding-right: 1.75rem;
   }
+  .ld-table-wide thead th {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+    vertical-align: middle;
+    background: var(--ld-tint);
+  }
+  .ld-table-wide tbody th,
+  .ld-table-wide tbody td {
+    padding-top: 1.15rem;
+    padding-bottom: 1.15rem;
+  }
   .ld-table td.ld-us {
     color: var(--ld-ink);
     font-weight: 500;

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
 import { requireStore } from "@/lib/auth";
-import { BASIC_FEE_BPS, resolvePlan } from "@/lib/billing";
+import { BASIC_FEE_BPS, getSubscription, resolvePlan } from "@/lib/billing";
 import { stripeConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Billing" };
@@ -34,6 +34,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const { store } = await requireStore();
   const { billing, upgrade } = await searchParams;
   const plan = await resolvePlan(store);
+  const sub = await getSubscription(store.userId);
+  // The card-backed 7-day trial is only offered to a store that has never had a Stripe subscription.
+  const trialAvailable = !plan.grandfathered && !sub?.stripeSubscriptionId;
   const status = STATUS_LABEL[plan.status] ?? STATUS_LABEL.none;
 
   // "You'd save on Pro": platform fees this store's buyers paid in the last 30 days (Basic only).
@@ -83,10 +86,17 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         {plan.grandfathered ? (
           <p className="text-sm text-muted-foreground">You&apos;re on Pro for free — no card, no expiry. Thanks for being an early creator.</p>
         ) : plan.trialing && plan.trialEndsAt ? (
-          <p className="text-sm text-muted-foreground">
-            Free Pro trial — {daysUntil(plan.trialEndsAt)} day{daysUntil(plan.trialEndsAt) === 1 ? "" : "s"} left (ends <LocalTime date={plan.trialEndsAt} mode="date" />). After
-            that you&apos;ll fall to Basic terms unless you subscribe.
-          </p>
+          plan.manageable ? (
+            <p className="text-sm text-muted-foreground">
+              Pro trial — {daysUntil(plan.trialEndsAt)} day{daysUntil(plan.trialEndsAt) === 1 ? "" : "s"} left. Your card is on file and your plan starts automatically on{" "}
+              <LocalTime date={plan.trialEndsAt} mode="date" />. Cancel any time before then from Manage billing and you won&apos;t be charged.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Free Pro trial — {daysUntil(plan.trialEndsAt)} day{daysUntil(plan.trialEndsAt) === 1 ? "" : "s"} left (ends <LocalTime date={plan.trialEndsAt} mode="date" />). After
+              that you&apos;ll fall to Basic terms unless you subscribe.
+            </p>
+          )
         ) : plan.status === "active" ? (
           <p className="text-sm text-muted-foreground">
             {plan.tier === "pro" ? "0% transaction fee on your sales." : "5% transaction fee on your sales."}
@@ -106,7 +116,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
       {/* Plan picker */}
       {plan.grandfathered ? null : stripeConfigured ? (
-        <PlanCards currentTier={plan.tier} trialing={plan.trialing} />
+        <PlanCards currentTier={plan.tier} trialing={plan.trialing} trialAvailable={trialAvailable} />
       ) : (
         <div className="rounded-xl border bg-muted/40 p-5 text-sm text-muted-foreground">Plan changes will be available once billing is enabled on this deployment.</div>
       )}
