@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { productFiles, products, stores, type SocialLinks } from "@/db/schema";
+import { instagramAccounts, productFiles, products, stores, type SocialLinks } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
 import { CURRENCIES } from "@/lib/format";
 import { revalidateStore } from "@/lib/queries";
@@ -121,4 +121,23 @@ export async function changeUsername(raw: string): Promise<{ ok: true; username:
   revalidateStore(username);
   revalidatePath("/app", "layout");
   return { ok: true, username };
+}
+
+// ---------- Instagram ----------
+export async function setInstagramOptions(patch: { publicReply?: boolean; active?: boolean }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const set: Partial<{ publicReply: boolean; active: boolean }> = {};
+  if (typeof patch.publicReply === "boolean") set.publicReply = patch.publicReply;
+  if (typeof patch.active === "boolean") set.active = patch.active;
+  if (Object.keys(set).length === 0) return { ok: false, error: "Nothing to change." };
+  await db.update(instagramAccounts).set(set).where(eq(instagramAccounts.storeId, store.id));
+  revalidatePath("/app/settings");
+  return { ok: true };
+}
+
+export async function disconnectInstagram(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  await db.delete(instagramAccounts).where(eq(instagramAccounts.storeId, store.id));
+  revalidatePath("/app/settings");
+  return { ok: true };
 }

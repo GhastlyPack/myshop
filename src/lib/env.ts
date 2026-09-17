@@ -51,6 +51,11 @@ const schema = z.object({
   META_PIXEL_ID: z.string().optional(),
   META_CAPI_TOKEN: z.string().optional(),
 
+  // Instagram API with Instagram Login (keyword auto-replies). If unset → Settings shows "coming soon".
+  INSTAGRAM_APP_ID: z.string().optional(),
+  INSTAGRAM_APP_SECRET: z.string().optional(),
+  INSTAGRAM_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+
   // Comma-separated admin emails (bootstrap); admins can also be added from /admin/team
   ADMIN_EMAILS: z.string().default(""),
   // The one owner. Can't be removed; only the owner removes admins. Defaults to the first ADMIN_EMAILS entry.
@@ -96,6 +101,7 @@ export const storageDriver: "s3" | "supabase" | "local" = s3Configured ? "s3" : 
 export const resendConfigured = Boolean(env.RESEND_API_KEY);
 export const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_CONNECT_CLIENT_ID);
 export const paypalConfigured = Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
+export const instagramConfigured = Boolean(env.INSTAGRAM_APP_ID && env.INSTAGRAM_APP_SECRET && env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN);
 export const adminEmails = env.ADMIN_EMAILS.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 export const ownerEmail = (env.OWNER_EMAIL ?? adminEmails[0] ?? "").toLowerCase();
 

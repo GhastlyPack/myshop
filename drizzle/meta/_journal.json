@@ -29,6 +29,13 @@
       "when": 1789647161151,
       "tag": "0003_cold_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789673971153,
+      "tag": "0004_loud_shadowcat",
+      "breakpoints": true
     }
   ]
 }

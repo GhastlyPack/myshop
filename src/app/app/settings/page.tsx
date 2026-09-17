@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ChangeUsernameForm } from "@/components/app/change-username-form";
 import { DeleteStoreDialog } from "@/components/app/delete-store-dialog";
+import { InstagramSettings } from "@/components/app/instagram-settings";
 import { PaymentsSettings } from "@/components/app/payments-settings";
 import { SettingsForm } from "@/components/app/settings-form";
 import { StorePublishToggle } from "@/components/app/store-publish-toggle";
@@ -11,8 +12,9 @@ import { publicUrl } from "@/lib/storage";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ ig_error?: string }> }) {
   const { store } = await requireStore();
+  const { ig_error } = await searchParams;
   return (
     <div className="space-y-8">
       <div>
@@ -52,6 +54,14 @@ export default async function SettingsPage() {
           <p className="text-xs text-muted-foreground">Connect a payout account to sell paid products. Free products work without one.</p>
         </div>
         <PaymentsSettings storeId={store.id} />
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold">Instagram</h2>
+          <p className="text-xs text-muted-foreground">Turn keyword comments and DMs into automatic replies with your product link.</p>
+        </div>
+        <InstagramSettings storeId={store.id} error={ig_error ?? null} />
       </section>
 
       <section className="space-y-3">

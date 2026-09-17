@@ -341,6 +341,49 @@ export const buyerSessions = pgTable(
   (t) => [uniqueIndex("buyer_sessions_token_idx").on(t.tokenHash)],
 );
 
+/** A creator's connected Instagram professional account (Instagram API with Instagram Login). */
+export const instagramAccounts = pgTable(
+  "instagram_accounts",
+  {
+    id: id(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    igUserId: text("ig_user_id").notNull(),
+    username: text("username").notNull(),
+    /** Long-lived user token, AES-GCM encrypted with SESSION_SECRET (see lib/instagram). */
+    tokenEnc: text("token_enc").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
+    /** Also post a short public reply ("Sent you a DM") under the comment. */
+    publicReply: boolean("public_reply").notNull().default(true),
+    active: boolean("active").notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("instagram_accounts_store_idx").on(t.storeId), uniqueIndex("instagram_accounts_ig_user_idx").on(t.igUserId)],
+);
+
+/** Every auto-reply we sent (idempotency by comment/message id + analytics). */
+export const instagramReplies = pgTable(
+  "instagram_replies",
+  {
+    id: id(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    productId: text("product_id").references(() => products.id, { onDelete: "set null" }),
+    kind: text("kind").notNull(), // "comment" | "dm"
+    sourceId: text("source_id").notNull(), // comment id or message id
+    fromIgUserId: text("from_ig_user_id"),
+    fromUsername: text("from_username"),
+    keyword: text("keyword"),
+    ok: boolean("ok").notNull().default(true),
+    error: text("error"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("instagram_replies_source_idx").on(t.sourceId), index("instagram_replies_store_idx").on(t.storeId, t.createdAt)],
+);
+
 /** Admin access granted to an email that hasn't signed in yet; applied on first login. */
 export const adminInvites = pgTable(
   "admin_invites",
@@ -396,3 +439,5 @@ export type Order = typeof orders.$inferSelect;
 export type Entitlement = typeof entitlements.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type Event = typeof events.$inferSelect;
+export type InstagramAccount = typeof instagramAccounts.$inferSelect;
+export type InstagramReply = typeof instagramReplies.$inferSelect;
