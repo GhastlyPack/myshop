@@ -55,7 +55,16 @@ const schema = z.object({
 // Treat empty strings as unset (Vercel imports of .env.example leave blanks), and let
 // Vercel's own URL stand in for APP_BASE_URL on previews when it isn't set explicitly.
 const raw: Record<string, string | undefined> = {};
-for (const [k, v] of Object.entries(process.env)) raw[k] = v === "" ? undefined : v;
+for (const [k, v] of Object.entries(process.env)) raw[k] = cleanEnvValue(k, v);
+
+/** Trim, drop wrapping quotes, and forgive a pasted `KEY=` prefix. Empty → undefined. */
+export function cleanEnvValue(key: string, v: string | undefined): string | undefined {
+  if (v == null) return undefined;
+  let s = v.trim();
+  if (s.startsWith(`${key}=`)) s = s.slice(key.length + 1).trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1).trim();
+  return s === "" ? undefined : s;
+}
 // The Auth0 Vercel integration writes `auth_AUTH0_*`; accept those as fallbacks.
 for (const k of ["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET"] as const) {
   if (!raw[k] && raw[`auth_${k}`]) raw[k] = raw[`auth_${k}`];
