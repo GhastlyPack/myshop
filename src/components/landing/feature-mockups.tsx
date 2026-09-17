@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
-import { resolveTheme, themeToCssVars, THEME_PRESETS } from "@/lib/theme";
+import { resolveTheme, themeToCssVars } from "@/lib/theme";
+import { LANDING_STORE_THEME } from "./store-theme";
 
 /**
  * Static UI mockups for the feature rows: the product editor, a buyer's
@@ -9,7 +10,7 @@ import { resolveTheme, themeToCssVars, THEME_PRESETS } from "@/lib/theme";
 
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-[var(--ld-cream)] p-4 sm:p-8">
+    <div className="min-w-0 rounded-2xl bg-[var(--ld-tint)] p-4 sm:p-8">
       <div className={`ld-card overflow-hidden ${className}`}>{children}</div>
     </div>
   );
@@ -45,7 +46,7 @@ export function EditorMock() {
           <div className="ld-muted mb-1.5 text-xs font-medium">File</div>
           <div className="flex items-center justify-between rounded-lg border ld-line px-3 py-2.5 text-sm">
             <span className="flex items-center gap-2.5">
-              <span className="grid h-7 w-7 place-content-center rounded-md bg-[var(--ld-cream)] text-[10px] font-semibold">ZIP</span>
+              <span className="grid h-7 w-7 place-content-center rounded-md bg-[var(--ld-tint)] text-[10px] font-semibold">ZIP</span>
               reels-pack.zip
             </span>
             <span className="ld-muted text-xs">48 MB · uploaded</span>
@@ -64,9 +65,9 @@ export function EditorMock() {
 
 /** Buyer checkout for a $9 product, rendered with the storefront's own classes. */
 export function CheckoutMock() {
-  const vars = themeToCssVars(resolveTheme(THEME_PRESETS.sunset.theme)) as CSSProperties;
+  const vars = themeToCssVars(resolveTheme(LANDING_STORE_THEME)) as CSSProperties;
   return (
-    <div className="rounded-2xl p-5 sm:p-8" style={{ ...vars, background: "var(--sf-bg)", backgroundImage: "var(--sf-bg-gradient)", color: "var(--sf-text)", fontFamily: "var(--sf-body-font)" }}>
+    <div className="min-w-0 rounded-2xl p-4 sm:p-8" style={{ ...vars, background: "var(--sf-bg)", color: "var(--sf-text)", fontFamily: "var(--sf-body-font)" }}>
       <div className="sf-surface mx-auto max-w-sm p-5">
         <div className="flex items-center gap-3">
           <span className="sf-thumb sf-thumb-sm !h-12 !w-12">

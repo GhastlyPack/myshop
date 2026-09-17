@@ -10,7 +10,7 @@ const links = [
 
 export function LandingNav({ signedIn, loginHref }: { signedIn: boolean; loginHref: string }) {
   return (
-    <header className="sticky top-0 z-40 border-b ld-line bg-[var(--ld-cream)]">
+    <header className="sticky top-0 z-40 border-b ld-line bg-[var(--ld-tint)]">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
         <Link href="/" className="shrink-0" aria-label="visitmy.shop home">
           <Wordmark size={22} />

@@ -9,7 +9,7 @@ export const contentType = "image/png";
 export default async function OG() {
   return new ImageResponse(
     (
-      <div style={{ width: 1200, height: 630, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 80, background: BRAND.cream, fontFamily: "Inter" }}>
+      <div style={{ width: 1200, height: 630, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 80, background: BRAND.tint, fontFamily: "Inter" }}>
         <WordmarkOG size={86} />
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
           <div style={{ fontSize: 60, fontWeight: 600, letterSpacing: -1.5, color: BRAND.ink, lineHeight: 1.05, maxWidth: 1040 }}>Your bio link, but it actually sells.</div>

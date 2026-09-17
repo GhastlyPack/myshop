@@ -1,6 +1,6 @@
 /*
  * Landing page (/) styles. Palette matches the OG cards in lib/og.tsx:
- * cream paper, ink text, awning orange. Storefront mockups on this page use
+ * white, light blue-grey tint, ink text, awning orange. Storefront mockups on this page use
  * the real .sf-* classes from storefront.css with theme vars set inline.
  *
  * Everything sits in Tailwind's `components` layer so utilities can override it.
@@ -8,12 +8,12 @@
 @layer components {
   .ld {
     --ld-ink: #111111;
-    --ld-cream: #faf7f2;
+    --ld-tint: #f1f4f8;
     --ld-orange: #f4611e;
     --ld-orange-deep: #d94f12;
-    --ld-muted: #6b7280;
-    --ld-line: rgb(17 17 17 / 0.12);
-    background: var(--ld-cream);
+    --ld-muted: #667085;
+    --ld-line: #dde3ec;
+    background: var(--ld-tint);
     color: var(--ld-ink);
     -webkit-font-smoothing: antialiased;
   }
@@ -90,7 +90,7 @@
     color: var(--ld-ink);
   }
   .ld-btn-paper:hover {
-    background: var(--ld-cream);
+    background: var(--ld-tint);
   }
 
   /* ---------- claim form ---------- */

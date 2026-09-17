@@ -32,7 +32,7 @@ export default async function ProductOG({ params }: { params: Promise<{ username
 
   return new ImageResponse(
     (
-      <div style={{ width: 1200, height: 630, display: "flex", background: BRAND.cream, fontFamily: "Inter", color: BRAND.ink }}>
+      <div style={{ width: 1200, height: 630, display: "flex", background: BRAND.tint, fontFamily: "Inter", color: BRAND.ink }}>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 72, width: image ? 720 : 1200 }}>
           <div style={{ display: "flex" }}>
             {tag && <div style={{ display: "flex", background: p?.priceCents === 0 ? BRAND.ink : BRAND.orange, color: BRAND.white, fontSize: 22, fontWeight: 600, padding: "10px 20px", borderRadius: 999 }}>{tag}</div>}

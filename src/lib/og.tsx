@@ -8,11 +8,11 @@ import { readFile } from "node:fs/promises";
  */
 export const BRAND = {
   ink: "#111111",
-  cream: "#FAF7F2",
+  tint: "#F1F4F8",
   white: "#FFFFFF",
   orange: "#F4611E",
   muted: "#6B7280",
-  border: "#D4D4D8",
+  border: "#DDE3EC",
 } as const;
 
 export const OG_SIZE = { width: 1200, height: 630 };

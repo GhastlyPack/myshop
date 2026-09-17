@@ -1,15 +1,16 @@
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { SOCIAL_ICONS } from "@/components/storefront/socials";
-import { resolveTheme, themeToCssVars, THEME_PRESETS } from "@/lib/theme";
+import { resolveTheme, themeToCssVars } from "@/lib/theme";
+import { LANDING_STORE_THEME } from "./store-theme";
 import type { CSSProperties } from "react";
 
 /**
  * Hero phone: a storefront for a fictional creator, rendered with the
- * storefront's own .sf-* classes and the "sunset" preset. Static markup only.
+ * storefront's own .sf-* classes and the landing store theme. Static markup only.
  */
 export function HeroPhone() {
-  const vars = themeToCssVars(resolveTheme(THEME_PRESETS.sunset.theme)) as CSSProperties;
+  const vars = themeToCssVars(resolveTheme(LANDING_STORE_THEME)) as CSSProperties;
   const Instagram = SOCIAL_ICONS.instagram;
   const TikTok = SOCIAL_ICONS.tiktok;
 
