@@ -58,6 +58,8 @@ const schema = z.object({
   INSTAGRAM_APP_ID: z.string().optional(),
   INSTAGRAM_APP_SECRET: z.string().optional(),
   INSTAGRAM_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+  // While the Meta app is pre-App-Review, only added testers can connect. false → beta: apply-only.
+  INSTAGRAM_PUBLIC: z.enum(["true", "false"]).default("false"),
 
   // Comma-separated admin emails (bootstrap); admins can also be added from /admin/team
   ADMIN_EMAILS: z.string().default(""),
@@ -107,6 +109,7 @@ export const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_CONN
 export const billingConfigured = stripeConfigured && Boolean(env.STRIPE_BILLING_WEBHOOK_SECRET);
 export const paypalConfigured = Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
 export const instagramConfigured = Boolean(env.INSTAGRAM_APP_ID && env.INSTAGRAM_APP_SECRET && env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN);
+export const instagramPublic = env.INSTAGRAM_PUBLIC === "true";
 export const adminEmails = env.ADMIN_EMAILS.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 export const ownerEmail = (env.OWNER_EMAIL ?? adminEmails[0] ?? "").toLowerCase();
 

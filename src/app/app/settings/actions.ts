@@ -5,9 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { instagramAccounts, productFiles, products, stores, type SocialLinks } from "@/db/schema";
+import { instagramAccounts, instagramBetaRequests, productFiles, products, stores, type SocialLinks } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
 import { CURRENCIES } from "@/lib/format";
+import { newId } from "@/lib/ids";
 import { revalidateStore } from "@/lib/queries";
 import { normalizeUsername, usernameError } from "@/lib/reserved";
 import { deleteObject } from "@/lib/storage";
@@ -139,6 +140,19 @@ export async function setInstagramOptions(patch: { publicReply?: boolean; active
 export async function disconnectInstagram(): Promise<{ ok: true } | { ok: false; error: string }> {
   const { store } = await requireStore();
   await db.delete(instagramAccounts).where(eq(instagramAccounts.storeId, store.id));
+  revalidatePath("/app/settings");
+  return { ok: true };
+}
+
+// ---------- Instagram beta ----------
+export async function applyForInstagramBeta(rawUsername: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const username = rawUsername.trim().replace(/^@+/, "").toLowerCase();
+  if (!/^[a-z0-9._]{1,30}$/.test(username)) return { ok: false, error: "Enter a valid Instagram username." };
+  await db
+    .insert(instagramBetaRequests)
+    .values({ id: newId("igb"), storeId: store.id, igUsername: username, status: "pending" })
+    .onConflictDoUpdate({ target: instagramBetaRequests.storeId, set: { igUsername: username, status: "pending" } });
   revalidatePath("/app/settings");
   return { ok: true };
 }

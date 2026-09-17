@@ -41,6 +41,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href="/admin/team" className="hover:text-foreground">
                 Team
               </Link>
+              <Link href="/admin/instagram" className="hover:text-foreground">
+                Instagram
+              </Link>
             </nav>
           </div>
           <Link href="/app" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">

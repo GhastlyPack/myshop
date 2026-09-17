@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocalTime } from "@/components/local-time";
 import { instagramConfigured } from "@/lib/env";
+import { instagramBetaState } from "@/lib/instagram-beta";
+import { InstagramBetaApply } from "./instagram-beta-apply";
 import { InstagramControls } from "./instagram-controls";
 
 function InstagramIcon({ className }: { className?: string }) {
@@ -36,21 +38,35 @@ export async function InstagramSettings({ storeId, error }: { storeId: string; e
   const acct = await db.query.instagramAccounts.findFirst({ where: eq(instagramAccounts.storeId, storeId) });
 
   if (!acct) {
+    const beta = await instagramBetaState(storeId);
+    const canConnect = beta.access === "open" || beta.access === "approved";
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <InstagramIcon className="size-4" /> Instagram auto-replies
+            {beta.access !== "open" && <Badge variant="secondary">Beta</Badge>}
           </CardTitle>
           <CardDescription>
             Connect your Business or Creator account. When someone comments or DMs a product&apos;s keyword, they get the link by DM within seconds.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {error && <p className="text-sm text-destructive">Couldn&apos;t connect: {decodeURIComponent(error)}</p>}
-          <Button asChild>
-            <a href="/api/instagram/connect">Connect Instagram</a>
-          </Button>
+          {error && <p className="text-sm text-destructive">{decodeURIComponent(error) === "beta" ? "Your beta access is still pending." : `Couldn't connect: ${decodeURIComponent(error)}`}</p>}
+          {canConnect ? (
+            <>
+              {beta.access === "approved" && <p className="text-sm text-muted-foreground">You&apos;re approved for the beta. Connect your account to switch it on.</p>}
+              <Button asChild>
+                <a href="/api/instagram/connect">Connect Instagram</a>
+              </Button>
+            </>
+          ) : beta.access === "pending" ? (
+            <p className="text-sm text-muted-foreground">Application received for <span className="font-medium">@{beta.username}</span>. We&apos;ll email you when you&apos;re approved, usually within a day.</p>
+          ) : beta.access === "denied" ? (
+            <p className="text-sm text-muted-foreground">Your beta application wasn&apos;t approved. Reply to your welcome email if you think that&apos;s a mistake.</p>
+          ) : (
+            <InstagramBetaApply />
+          )}
         </CardContent>
       </Card>
     );

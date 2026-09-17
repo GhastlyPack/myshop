@@ -367,6 +367,22 @@ export const instagramAccounts = pgTable(
   (t) => [uniqueIndex("instagram_accounts_store_idx").on(t.storeId), uniqueIndex("instagram_accounts_ig_user_idx").on(t.igUserId)],
 );
 
+/** Beta access requests for Instagram auto-replies (pre-App-Review; admin adds them as Meta testers). */
+export const instagramBetaRequests = pgTable(
+  "instagram_beta_requests",
+  {
+    id: id(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    igUsername: text("ig_username").notNull(),
+    status: text("status").notNull().default("pending"), // pending | approved | denied
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("instagram_beta_store_idx").on(t.storeId)],
+);
+
 /** Every auto-reply we sent (idempotency by comment/message id + analytics). */
 export const instagramReplies = pgTable(
   "instagram_replies",
@@ -482,3 +498,5 @@ export type Event = typeof events.$inferSelect;
 export type InstagramAccount = typeof instagramAccounts.$inferSelect;
 export type InstagramReply = typeof instagramReplies.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
+
+export type InstagramBetaRequest = typeof instagramBetaRequests.$inferSelect;
