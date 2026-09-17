@@ -29,23 +29,27 @@ export default async function StoreOG({ params }: { params: Promise<{ username: 
 
   return new ImageResponse(
     (
-      <div style={{ width: 1200, height: 630, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 80, background: BRAND.ink, fontFamily: "Inter", color: BRAND.white }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
-          {avatar ? (
-            <img src={avatar} width={160} height={160} alt="" style={{ width: 160, height: 160, borderRadius: 160, objectFit: "cover" }} />
-          ) : (
-            <div style={{ width: 160, height: 160, borderRadius: 160, background: BRAND.orange, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 72, fontWeight: 600 }}>{initial}</div>
-          )}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ fontSize: 64, fontWeight: 600, letterSpacing: -2, lineHeight: 1.05, maxWidth: 1040 }}>{name}</div>
-          {meta && <div style={{ fontSize: 28, fontWeight: 400, color: "#A1A1AA" }}>{meta}</div>}
-        </div>
-        <div style={{ display: "flex" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#29292B", padding: "12px 20px 12px 18px", borderRadius: 999, fontSize: 20, fontWeight: 600 }}>
-            <Awning width={28} />
-            <span>visitmy.shop/{store?.username ?? ""}</span>
+      <div style={{ width: 1200, height: 630, display: "flex", background: BRAND.tint, fontFamily: "Inter", color: BRAND.ink }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 80, width: 800 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 20, fontWeight: 600, color: BRAND.muted }}>
+            <Awning width={26} />
+            <span>visitmy.shop</span>
           </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 68, letterSpacing: -2.5, lineHeight: 1.02, maxWidth: 640 }}>{name}</div>
+            {store?.bio && <div style={{ fontSize: 26, color: BRAND.muted, lineHeight: 1.4, maxWidth: 620 }}>{store.bio.slice(0, 120)}</div>}
+            {meta && <div style={{ fontSize: 22, fontWeight: 600, color: BRAND.muted }}>{meta}</div>}
+          </div>
+          <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", alignItems: "center", background: BRAND.orange, color: BRAND.white, padding: "14px 28px", borderRadius: 999, fontSize: 22, fontWeight: 600 }}>visitmy.shop/{store?.username ?? ""}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 400, height: 630 }}>
+          {avatar ? (
+            <img src={avatar} width={280} height={280} alt="" style={{ width: 280, height: 280, borderRadius: 280, objectFit: "cover", border: `8px solid ${BRAND.white}` }} />
+          ) : (
+            <div style={{ width: 280, height: 280, borderRadius: 280, background: BRAND.orange, color: BRAND.white, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 120, fontWeight: 600 }}>{initial}</div>
+          )}
         </div>
       </div>
     ),

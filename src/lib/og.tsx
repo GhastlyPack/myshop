@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 /**
  * Shared pieces for the ImageResponse routes (favicon, apple icon, OG cards).
@@ -68,4 +69,10 @@ export function WordmarkOG({ size, color = BRAND.ink, markColor = BRAND.orange }
       <span>shop</span>
     </div>
   );
+}
+
+/** A file from public/landing as a data URI, so satori doesn't need a network round trip. */
+export async function landingImage(name: string) {
+  const buf = await readFile(path.join(process.cwd(), "public", "landing", name));
+  return `data:image/jpeg;base64,${buf.toString("base64")}`;
 }

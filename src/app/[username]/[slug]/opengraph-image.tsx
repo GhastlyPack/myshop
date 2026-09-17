@@ -38,7 +38,7 @@ export default async function ProductOG({ params }: { params: Promise<{ username
             {tag && <div style={{ display: "flex", background: p?.priceCents === 0 ? BRAND.ink : BRAND.orange, color: BRAND.white, fontSize: 22, fontWeight: 600, padding: "10px 20px", borderRadius: 999 }}>{tag}</div>}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ fontSize: image ? 54 : 64, fontWeight: 600, letterSpacing: -1.5, lineHeight: 1.05 }}>{title}</div>
+            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: image ? 54 : 64, letterSpacing: -2, lineHeight: 1.05 }}>{title}</div>
             {subtitle && <div style={{ fontSize: 24, fontWeight: 400, color: BRAND.muted, lineHeight: 1.35 }}>{subtitle}</div>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 20, fontWeight: 600, color: BRAND.muted }}>
@@ -47,8 +47,8 @@ export default async function ProductOG({ params }: { params: Promise<{ username
           </div>
         </div>
         {image && (
-          <div style={{ display: "flex", width: 480, height: 630, overflow: "hidden" }}>
-            <img src={image} alt="" width={480} height={630} style={{ width: 480, height: 630, objectFit: "cover" }} />
+          <div style={{ display: "flex", width: 480, height: 630, padding: "48px 48px 48px 0" }}>
+            <img src={image} alt="" width={432} height={534} style={{ width: 432, height: 534, objectFit: "cover", borderRadius: 24, border: `1px solid ${BRAND.border}` }} />
           </div>
         )}
       </div>
