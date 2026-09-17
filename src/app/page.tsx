@@ -153,7 +153,7 @@ export default async function Home() {
           <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
             <div>
               <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">How it compares.</h2>
-              <p className="ld-muted mt-5 max-w-md text-lg leading-relaxed">We don’t do courses, bookings, or communities yet. We do the bio-link store better than anyone.</p>
+              <p className="ld-muted mt-5 max-w-md text-lg leading-relaxed">Courses, bookings, and communities coming soon. Today we do the bio-link store better than anyone.</p>
               <p className="ld-muted mt-5 text-sm">Compared against published plans, September 2026.</p>
             </div>
             <div className="overflow-x-auto">
