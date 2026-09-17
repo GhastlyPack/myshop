@@ -68,6 +68,8 @@ export const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_CONN
 export const paypalConfigured = Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
 export const adminEmails = env.ADMIN_EMAILS.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 
-if (isProd && !auth0Configured) {
-  throw new Error("Auth0 must be configured in production");
+// In production without Auth0 nobody can sign in (the dev bypass is disabled there).
+// Warn rather than throw so `next build` and preview deploys still succeed.
+if (isProd && !auth0Configured && process.env.NEXT_PHASE !== "phase-production-build") {
+  console.warn("[env] Auth0 is not configured; creator sign-in is disabled.");
 }
