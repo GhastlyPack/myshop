@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { isProd, s3Configured } from "@/lib/env";
+import { isProd, storageDriver } from "@/lib/env";
 import { localPut } from "@/lib/storage";
 
 // Dev-only stand-in for a presigned S3 PUT. The ticket token is minted by createUploadTicket().
 export async function PUT(req: Request) {
-  if (isProd || s3Configured) return NextResponse.json({ error: "disabled" }, { status: 404 });
+  if (isProd || storageDriver !== "local") return NextResponse.json({ error: "disabled" }, { status: 404 });
   const t = new URL(req.url).searchParams.get("t");
   if (!t) return NextResponse.json({ error: "missing ticket" }, { status: 400 });
   try {

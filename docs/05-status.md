@@ -27,7 +27,7 @@ Still needed:
 - The keys below (paste into Vercel → Settings → Environment Variables; empty values are now ignored by the app):
 1. **Supabase** project → `DATABASE_URL` (pooler, 6543) + `DATABASE_DIRECT_URL` (5432). Run `pnpm db:migrate` against it.
 2. **Auth0** Regular Web App → `AUTH0_DOMAIN/CLIENT_ID/CLIENT_SECRET/SECRET`; callback `https://visitmy.shop/auth/callback`, logout `https://visitmy.shop`. Enable Google.
-3. **AWS S3**: private `visitmyshop-files`, public `visitmyshop-public` (+ CORS allowing PUT from the app origin), IAM user → `AWS_ACCESS_KEY_ID/SECRET`, `S3_PUBLIC_BASE_URL`.
+3. **File storage — pick one.** Fastest: **Supabase Storage** → set `SUPABASE_URL` (https://gfnivtdvwseptgyhuvxr.supabase.co) and `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Settings → API → service_role). The app creates the `files` (private) and `public` buckets on first upload; 50 MB/file on the free plan, 5 GB on Pro. Or **AWS S3**: private `visitmyshop-files`, public `visitmyshop-public` (+ CORS allowing PUT from the app origin), IAM user → `AWS_ACCESS_KEY_ID/SECRET`, `S3_PUBLIC_BASE_URL`. S3 wins if both are set.
 4. **Resend**: verify `visitmy.shop` → `RESEND_API_KEY`.
 5. **Stripe** platform account with Connect (Standard): `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_CONNECT_CLIENT_ID`; Connect redirect URI `https://visitmy.shop/api/payments/stripe/callback`; a *Connect* webhook at `https://visitmy.shop/api/webhooks/stripe` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, `account.updated`, `account.application.deauthorized` → `STRIPE_WEBHOOK_SECRET`.
 6. Optional now: `META_PIXEL_ID` + `META_CAPI_TOKEN`; PayPal partner application (M7).

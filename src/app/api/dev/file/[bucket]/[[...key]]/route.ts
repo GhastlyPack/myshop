@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isProd, s3Configured } from "@/lib/env";
+import { isProd, storageDriver } from "@/lib/env";
 import { localGet, verifyLocalDownload } from "@/lib/storage";
 
 /**
@@ -8,7 +8,7 @@ import { localGet, verifyLocalDownload } from "@/lib/storage";
  *   /api/dev/file/files?t=<jwt>  → private bucket, token from signedDownloadUrl()
  */
 export async function GET(req: Request, ctx: { params: Promise<{ bucket: string; key?: string[] }> }) {
-  if (isProd || s3Configured) return new NextResponse("disabled", { status: 404 });
+  if (isProd || storageDriver !== "local") return new NextResponse("disabled", { status: 404 });
   const { bucket, key } = await ctx.params;
   try {
     if (bucket === "public") {

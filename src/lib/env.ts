@@ -27,6 +27,9 @@ const schema = z.object({
   S3_BUCKET_FILES: z.string().optional(), // private product files
   S3_BUCKET_PUBLIC: z.string().optional(), // thumbnails, avatars
   S3_PUBLIC_BASE_URL: z.string().optional(), // e.g. https://visitmyshop-public.s3.amazonaws.com
+  // Storage alternative: Supabase Storage (private + public buckets, signed URLs). Used when AWS is unset.
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 
   // Email. If unset → dev outbox at /dev/outbox.
   RESEND_API_KEY: z.string().optional(),
@@ -85,6 +88,9 @@ export const env = parsed.data;
 export const isProd = env.NODE_ENV === "production";
 export const auth0Configured = Boolean(env.AUTH0_DOMAIN && env.AUTH0_CLIENT_ID && env.AUTH0_CLIENT_SECRET && env.AUTH0_SECRET);
 export const s3Configured = Boolean(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.S3_BUCKET_FILES && env.S3_BUCKET_PUBLIC);
+export const supabaseStorageConfigured = !s3Configured && Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+/** Which storage backend is active. */
+export const storageDriver: "s3" | "supabase" | "local" = s3Configured ? "s3" : supabaseStorageConfigured ? "supabase" : "local";
 export const resendConfigured = Boolean(env.RESEND_API_KEY);
 export const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_CONNECT_CLIENT_ID);
 export const paypalConfigured = Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
