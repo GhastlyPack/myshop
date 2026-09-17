@@ -18,6 +18,7 @@ type Store = { name: string; handle: string; bio: string; img: string; products:
 
 /** One fictional creator per preset, each selling something that fits the look. */
 const STORES: Record<string, Store> = {
+  paper: { name: "Noor Haddad", handle: "noorhaddad", bio: "Wedding photographer. Guides for couples and shooters.", img: "noor", products: [{ title: "Posing guide for couples", price: "$24" }, { title: "Client email templates", price: "$12" }] },
   clean: { name: "Ava Chen", handle: "avachen", bio: "Notion templates for freelancers.", img: "ava", products: [{ title: "Freelance OS for Notion", price: "$29" }, { title: "Client onboarding kit", price: "$12" }] },
   midnight: { name: "Deon Reyes", handle: "deonbeats", bio: "Producer. Sample packs and drum kits.", img: "deon", products: [{ title: "Late Nights Vol. 2", price: "$24" }, { title: "808 Essentials drum kit", price: "$9" }] },
   editorial: { name: "Harriet Vale", handle: "harrietwrites", bio: "Essays on slow living. One a week.", img: "harriet", products: [{ title: "Small Hours, an ebook", price: "$14" }, { title: "52 writing prompts", price: "$8" }] },
@@ -42,7 +43,7 @@ export function ThemeCards() {
       <link rel="stylesheet" href={presetFontsHref()} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Object.entries(THEME_PRESETS)
-          .filter(([key]) => key in STORES)
+          .filter(([key]) => key in STORES && key !== "clean")
           .map(([key, preset]) => {
           const t = resolveTheme(preset.theme);
           const vars = themeToCssVars(t) as CSSProperties;

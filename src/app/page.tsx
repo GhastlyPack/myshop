@@ -8,7 +8,6 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, SITE } from "@/lib/site";
 import { HeroPhone } from "@/components/landing/phone";
 import { COMPETITORS, PLANS } from "@/lib/plans";
-import { ProofStrip } from "@/components/landing/proof-strip";
 import Image from "next/image";
 import { ThemeCards } from "@/components/landing/theme-cards";
 import { getCurrentUser, loginPath } from "@/lib/auth";
@@ -82,7 +81,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <ProofStrip />
+      {/* Proof strip (components/landing/proof-strip.tsx) stays off until there are real creators to show. */}
 
       {/* ---------- first five minutes: real screenshots ---------- */}
       <section className="ld-ink">
@@ -99,7 +98,7 @@ export default async function Home() {
             ].map((s, i) => (
               <figure key={s.t}>
                 <div className="mx-auto w-[260px] rounded-[40px] bg-[#0f0f10] p-2.5">
-                  <Image src={s.src} alt={s.t} width={780} height={1688} className="w-full rounded-[32px]" sizes="260px" priority={i === 0} />
+                  <Image src={s.src} alt={s.t} width={1000} height={2164} className="w-full rounded-[32px]" sizes="260px" priority={i === 0} />
                 </div>
                 <figcaption className="mt-6 text-center sm:text-left">
                   <div className="text-lg font-semibold">{s.t}</div>
