@@ -54,6 +54,7 @@ export function ProductEditor({
   quantitySold,
   bumpCandidates,
   discountCodes,
+  tier,
 }: {
   product: EditorProduct;
   thumbnailUrl: string | null;
@@ -66,6 +67,7 @@ export function ProductEditor({
   quantitySold: number;
   bumpCandidates: BumpCandidate[];
   discountCodes: DiscountCodeRow[];
+  tier: "basic" | "pro";
 }) {
   const router = useRouter();
   const { id, status: initialStatus, ...rest } = product;
@@ -189,6 +191,7 @@ export function ProductEditor({
             quantitySold={quantitySold}
             bumpCandidates={bumpCandidates}
             discountCodes={discountCodes}
+            tier={tier}
           />
         </TabsContent>
         <TabsContent value="options" className="pt-4">

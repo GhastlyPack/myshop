@@ -413,20 +413,43 @@ export const adminInvites = pgTable(
   (t) => [uniqueIndex("admin_invites_email_idx").on(t.email)],
 );
 
-// Unused until our own billing (Commas / Stripe app fees) lands.
-export const subscriptions = pgTable("subscriptions", {
-  id: id(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  plan: text("plan").notNull().default("starter"),
-  status: text("status").notNull().default("trialing"),
-  provider: text("provider"),
-  externalId: text("external_id"),
-  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-});
+/**
+ * Our own billing: the creator pays US on the platform Stripe account.
+ * 1:1 with the user (users↔stores are 1:1 too). `plan`/`interval`/`status` are the
+ * source of truth for the effective plan; see src/lib/billing.ts `resolvePlan`.
+ *   plan     = "basic" | "pro"
+ *   interval = "month" | "year"
+ *   status   = "trialing" | "active" | "past_due" | "canceled" | "incomplete"
+ * `grandfathered` = an existing user comped onto Pro forever (no trial, no card).
+ */
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    plan: text("plan").notNull().default("basic"),
+    interval: text("interval").notNull().default("month"),
+    status: text("status").notNull().default("trialing"),
+    provider: text("provider"),
+    externalId: text("external_id"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    stripePriceLookupKey: text("stripe_price_lookup_key"),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+    grandfathered: boolean("grandfathered").notNull().default(false),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("subscriptions_user_id_idx").on(t.userId),
+    index("subscriptions_customer_idx").on(t.stripeCustomerId),
+    index("subscriptions_sub_idx").on(t.stripeSubscriptionId),
+  ],
+);
 
 export const jobs = pgTable(
   "jobs",
@@ -458,3 +481,4 @@ export type Review = typeof reviews.$inferSelect;
 export type Event = typeof events.$inferSelect;
 export type InstagramAccount = typeof instagramAccounts.$inferSelect;
 export type InstagramReply = typeof instagramReplies.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;

@@ -14,6 +14,7 @@ import Markdown from "react-markdown";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { TrackView } from "@/components/storefront/track-view";
 import { getPublicStoreTagged, storeTag } from "@/lib/queries";
+import { planTier } from "@/lib/billing";
 import { publicUrl } from "@/lib/storage";
 import { inArray } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
@@ -55,6 +56,8 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
   if (!data) notFound();
   const { store, sections, products } = data;
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);
+  // "Remove branding" is a Pro feature: Basic stores always show the footer credit.
+  if ((await planTier(store)) === "basic") theme.showBranding = true;
   const links = await firstLinks(store.username, products);
 
   const toCard = (p: Product): CardProduct => {

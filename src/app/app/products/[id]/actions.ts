@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { discountCodes, productFiles, productLinks, products, sections, type CustomField, type DiscountCode } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
 import { canOfferBump } from "@/lib/commerce";
+import { planTier } from "@/lib/billing";
 import { newId } from "@/lib/ids";
 import { discountCodeInputSchema, productInputSchema, toSlug, type DiscountCodeInput, type ProductInput } from "@/lib/product-input";
 import { revalidateStore } from "@/lib/queries";
@@ -38,6 +39,7 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
   const d = parsed.data;
   const errors: Record<string, string> = {};
 
+  const tier = await planTier(store);
   // Uploaded objects must belong to this store.
   const prefix = `${store.id}/`;
   if (d.thumbnailKey && !d.thumbnailKey.startsWith(prefix)) errors.thumbnailKey = "Invalid image.";
@@ -99,8 +101,17 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
   }
   if (Object.keys(errors).length) return { ok: false, errors };
 
+  // Server-side plan enforcement (the UI hides these for Basic, this closes the direct-call hole).
+  // Basic sellers keep any Pro config already saved on this product, but can't add/change it here.
+  const proOnly = tier === "pro";
+  const effBumpProductId = proOnly ? bumpProductId : product.bumpProductId;
+  const effBumpHeadline = proOnly ? d.bumpHeadline || null : product.bumpHeadline;
+  const effBumpDiscountPercent = proOnly ? d.bumpDiscountPercent : product.bumpDiscountPercent;
+  const effQuantityLimit = proOnly ? d.quantityLimit : product.quantityLimit;
+  const effFields = proOnly ? d.fields : (product.fields as typeof d.fields);
+
   const title = d.title || "Untitled product";
-  const fields: CustomField[] = d.fields.map((f) => ({
+  const fields: CustomField[] = effFields.map((f) => ({
     id: f.id,
     label: f.label,
     type: f.type,
@@ -132,10 +143,10 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
         listed: d.listed,
         dmKeyword: d.dmKeyword || null,
         dmReplyText: d.dmReplyText || null,
-        quantityLimit: d.quantityLimit,
-        bumpProductId,
-        bumpHeadline: bumpProductId ? d.bumpHeadline || null : null,
-        bumpDiscountPercent: bumpProductId ? d.bumpDiscountPercent : 0,
+        quantityLimit: effQuantityLimit,
+        bumpProductId: effBumpProductId,
+        bumpHeadline: effBumpProductId ? effBumpHeadline : null,
+        bumpDiscountPercent: effBumpProductId ? effBumpDiscountPercent : 0,
         status,
       })
       .where(eq(products.id, product.id));
@@ -248,6 +259,7 @@ const toRow = (r: DiscountCode): DiscountCodeRow => ({
 
 export async function addDiscountCode(productId: string, input: DiscountCodeInput): Promise<{ ok: true; code: DiscountCodeRow } | { ok: false; error: string }> {
   const { store } = await requireStore();
+  if ((await planTier(store)) !== "pro") return { ok: false, error: "Discount codes are a Pro feature." };
   const product = await ownProduct(productId, store.id);
   if (!product) return { ok: false, error: "Product not found." };
   const parsed = discountCodeInputSchema.safeParse(input);

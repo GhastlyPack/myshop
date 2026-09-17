@@ -19,6 +19,7 @@ import { TrackView } from "@/components/storefront/track-view";
 import { PixelEvent } from "@/components/storefront/pixel-event";
 import { bumpPrice, defaultBumpHeadline, isSoldOut, LOW_STOCK_AT, remainingUnits } from "@/lib/commerce";
 import { findProductByPreviousSlug, getPublicProduct, getPublicStoreTagged } from "@/lib/queries";
+import { planTier } from "@/lib/billing";
 import { publicUrl } from "@/lib/storage";
 
 type Props = { params: Promise<{ username: string; slug: string }>; searchParams: Promise<{ lp?: string; previewTheme?: string | string[] }> };
@@ -51,6 +52,8 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const { store, product, files, links, reviews, bump } = data;
   const siblings = (await getPublicStoreTagged(username))?.products.filter((p) => p.id !== product.id).slice(0, 4) ?? [];
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);
+  // "Remove branding" is a Pro feature: Basic stores always show the footer credit.
+  if ((await planTier(store)) === "basic") theme.showBranding = true;
   const remaining = remainingUnits(product);
   const soldOut = isSoldOut(product);
   const bumpOffer: BumpOffer | null =

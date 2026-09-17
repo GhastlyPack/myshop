@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BarChart3, ExternalLink, LayoutGrid, LogOut, Menu, MessageSquareText, Palette, Settings, ShieldCheck, Users, Wallet } from "lucide-react";
+import { BarChart3, CreditCard, ExternalLink, LayoutGrid, LogOut, Menu, MessageSquareText, Palette, Settings, ShieldCheck, Users, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Wordmark } from "@/components/brand/wordmark";
@@ -16,6 +16,7 @@ const items = [
   { href: "/app/income", label: "Income", icon: Wallet },
   { href: "/app/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/app/reviews", label: "Reviews", icon: MessageSquareText },
+  { href: "/app/billing", label: "Billing", icon: CreditCard },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 

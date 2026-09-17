@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { discountCodes, productFiles, productLinks, products, sections } from "@/db/schema";
 import { ProductEditor } from "@/components/app/product-editor/editor";
 import { requireStore } from "@/lib/auth";
+import { planTier } from "@/lib/billing";
 import { env } from "@/lib/env";
 import { publicUrl } from "@/lib/storage";
 
@@ -13,6 +14,7 @@ export const metadata: Metadata = { title: "Edit product" };
 export default async function ProductEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { store } = await requireStore();
+  const tier = await planTier(store);
   const product = await db.query.products.findFirst({ where: and(eq(products.id, id), eq(products.storeId, store.id), isNull(products.deletedAt)) });
   if (!product) notFound();
   const [files, links, secs, codes, bumpCandidates] = await Promise.all([
@@ -78,6 +80,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
       sections={secs}
       store={{ username: store.username, currency: store.currency }}
       baseUrl={env.APP_BASE_URL}
+      tier={tier}
     />
   );
 }

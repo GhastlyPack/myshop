@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { orders, type CustomField, type TrafficSource } from "@/db/schema";
+import { resolvePlan } from "@/lib/billing";
 import { bumpPrice, computeTotals, findDiscount, liveAvailability, normalizeCode, resolveBump } from "@/lib/commerce";
 import { env } from "@/lib/env";
 import { claimFreeProduct } from "@/lib/free-checkout";
@@ -130,6 +131,9 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     redirect(`/${store.username}/${product.slug}/thanks?e=${res.token}`);
   }
 
+  // The seller's transaction fee follows their plan: Basic = 5%, Pro/trial = 0%.
+  const { feeBps } = await resolvePlan(store);
+
   // Paid: pending order first so the provider's webhook has something to mark paid.
   const orderId = newId("ord");
   await db.insert(orders).values({
@@ -162,7 +166,7 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     title: product.title,
     successUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}/thanks?o=${orderId}`,
     cancelUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}`,
-    platformFeeBps: store.platformFeeBps,
+    platformFeeBps: feeBps,
   });
   if (!res.ok) {
     await db.update(orders).set({ status: "failed" }).where(eq(orders.id, orderId));

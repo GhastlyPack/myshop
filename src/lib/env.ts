@@ -39,7 +39,8 @@ const schema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   STRIPE_CONNECT_CLIENT_ID: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(), // Connect endpoint (/api/webhooks/stripe)
+  STRIPE_BILLING_WEBHOOK_SECRET: z.string().optional(), // platform-account subscription endpoint (/api/webhooks/billing)
 
   // PayPal Commerce Platform (partner). If unset → hidden.
   PAYPAL_CLIENT_ID: z.string().optional(),
@@ -102,6 +103,8 @@ export const supabaseStorageConfigured = !s3Configured && Boolean(env.SUPABASE_U
 export const storageDriver: "s3" | "supabase" | "local" = s3Configured ? "s3" : supabaseStorageConfigured ? "supabase" : "local";
 export const resendConfigured = Boolean(env.RESEND_API_KEY);
 export const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_CONNECT_CLIENT_ID);
+/** Our own subscription billing: checkout/portal need only Stripe; the billing webhook also needs its signing secret. */
+export const billingConfigured = stripeConfigured && Boolean(env.STRIPE_BILLING_WEBHOOK_SECRET);
 export const paypalConfigured = Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
 export const instagramConfigured = Boolean(env.INSTAGRAM_APP_ID && env.INSTAGRAM_APP_SECRET && env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN);
 export const adminEmails = env.ADMIN_EMAILS.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);

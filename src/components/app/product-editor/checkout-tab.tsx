@@ -5,6 +5,7 @@ import type { CustomField } from "@/db/schema";
 import type { DiscountCodeRow } from "@/app/app/products/[id]/actions";
 import { DiscountCodes } from "@/components/app/product-editor/discount-codes";
 import type { BumpCandidate, TabProps } from "@/components/app/product-editor/editor";
+import { ProLock } from "@/components/app/pro-lock";
 import { Field, FieldError, FieldHint } from "@/components/app/product-editor/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +43,9 @@ export function CheckoutTab({
   quantitySold,
   bumpCandidates,
   discountCodes,
-}: TabProps & { productId: string; currency: string; quantitySold: number; bumpCandidates: BumpCandidate[]; discountCodes: DiscountCodeRow[] }) {
+  tier,
+}: TabProps & { productId: string; currency: string; quantitySold: number; bumpCandidates: BumpCandidate[]; discountCodes: DiscountCodeRow[]; tier: "basic" | "pro" }) {
+  const isPro = tier === "pro";
   const fields = form.fields;
   const limited = form.quantityLimit != null;
   const remaining = form.quantityLimit != null ? Math.max(0, form.quantityLimit - quantitySold) : null;
@@ -59,6 +62,7 @@ export function CheckoutTab({
 
   return (
     <div className="space-y-6">
+      {isPro ? (
       <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
         <div>
           <h2 className="text-sm font-semibold">Checkout questions</h2>
@@ -117,6 +121,9 @@ export function CheckoutTab({
           <Plus data-icon="inline-start" /> Add question
         </Button>
       </section>
+      ) : (
+        <ProLock feature="checkout-questions" title="Checkout questions" description="Ask buyers for extra details at checkout — handle, size, anything. Available on Pro." />
+      )}
 
       <section className="space-y-3 rounded-xl border bg-background p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
@@ -128,6 +135,7 @@ export function CheckoutTab({
         </div>
       </section>
 
+      {isPro ? (
       <section className="space-y-3 rounded-xl border bg-background p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -154,7 +162,11 @@ export function CheckoutTab({
           </Field>
         )}
       </section>
+      ) : (
+        <ProLock feature="limited-quantity" title="Limit quantity" description="Cap how many you sell — cohorts, seats, launch bundles. Available on Pro." />
+      )}
 
+      {isPro ? (
       <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
         <div>
           <h2 className="text-sm font-semibold">Order bump</h2>
@@ -211,8 +223,15 @@ export function CheckoutTab({
           </>
         )}
       </section>
+      ) : (
+        <ProLock feature="order-bump" title="Order bump" description="Offer a one-tap add-on above the pay button to lift order value. Available on Pro." />
+      )}
 
-      <DiscountCodes productId={productId} currency={currency} priceCents={form.priceCents} initial={discountCodes} />
+      {isPro ? (
+        <DiscountCodes productId={productId} currency={currency} priceCents={form.priceCents} initial={discountCodes} />
+      ) : (
+        <ProLock feature="discount-codes" title="Discount codes" description="Create promo codes with limits and expiry dates. Available on Pro." />
+      )}
 
       <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
         <div>
