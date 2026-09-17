@@ -2,31 +2,34 @@ import "server-only";
 import { and, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, orders, productFiles, products, stores, users } from "@/db/schema";
+import { withDeadline } from "@/lib/watchdog";
 
 const int = (expr: ReturnType<typeof sql>) => sql<number>`(${expr})::int`;
 
 export async function getAdminOverview() {
   const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
+  const t0 = Date.now();
+  const timed = <T,>(label: string, p: Promise<T>) => withDeadline(`admin.${label}`, p).then((r) => { console.log(`[admin] ${label} ${Date.now() - t0}ms`); return r; });
   const [[u], [s], [p], [o], [f], [e], recentSignups, topStores] = await Promise.all([
-    db.select({ n: int(sql`count(*)`) }).from(users),
-    db.select({ n: int(sql`count(*)`), published: int(sql`count(*) filter (where ${stores.published})`) }).from(stores),
-    db.select({ n: int(sql`count(*) filter (where ${products.deletedAt} is null)`), published: int(sql`count(*) filter (where ${products.status} = 'published' and ${products.deletedAt} is null)`) }).from(products),
-    db
+    timed("users", db.select({ n: int(sql`count(*)`) }).from(users)),
+    timed("stores", db.select({ n: int(sql`count(*)`), published: int(sql`count(*) filter (where ${stores.published})`) }).from(stores)),
+    timed("products", db.select({ n: int(sql`count(*) filter (where ${products.deletedAt} is null)`), published: int(sql`count(*) filter (where ${products.status} = 'published' and ${products.deletedAt} is null)`) }).from(products)),
+    timed("orders", db
       .select({ n: int(sql`count(*)`), revenueCents: int(sql`coalesce(sum(${orders.amountCents}), 0)`) })
       .from(orders)
-      .where(eq(orders.status, "paid")),
-    db.select({ bytes: sql<number>`coalesce(sum(${productFiles.bytes}), 0)::bigint`, n: int(sql`count(*)`) }).from(productFiles),
-    db
+      .where(eq(orders.status, "paid"))),
+    timed("files", db.select({ bytes: sql<number>`coalesce(sum(${productFiles.bytes}), 0)::bigint`, n: int(sql`count(*)`) }).from(productFiles)),
+    timed("events", db
       .select({ n: int(sql`count(*)`) })
       .from(events)
-      .where(gte(events.createdAt, dayAgo)),
-    db
+      .where(gte(events.createdAt, dayAgo))),
+    timed("signups", db
       .select({ id: users.id, email: users.email, name: users.name, role: users.role, createdAt: users.createdAt, username: stores.username })
       .from(users)
       .leftJoin(stores, eq(stores.userId, users.id))
       .orderBy(desc(users.createdAt))
-      .limit(10),
-    db
+      .limit(10)),
+    timed("topStores", db
       .select({
         id: stores.id,
         username: stores.username,
@@ -38,7 +41,7 @@ export async function getAdminOverview() {
       .innerJoin(orders, and(eq(orders.storeId, stores.id), eq(orders.status, "paid")))
       .groupBy(stores.id, stores.username, stores.displayName)
       .orderBy(desc(sql`count(${orders.id})`), desc(sql`sum(${orders.amountCents})`))
-      .limit(10),
+      .limit(10)),
   ]);
 
   return {

@@ -8,6 +8,7 @@ import { adminInvites, stores, users, type Store, type User } from "@/db/schema"
 import { adminEmails, auth0Configured, env, isProd, ownerEmail } from "@/lib/env";
 import { newId } from "@/lib/ids";
 import { auth0 } from "./auth0";
+import { withDeadline } from "@/lib/watchdog";
 
 export type Identity = { sub: string; email: string; name?: string | null; picture?: string | null };
 
@@ -17,7 +18,7 @@ const secret = new TextEncoder().encode(env.SESSION_SECRET);
 /** Raw identity from Auth0 (prod) or the dev cookie (local). Null if signed out. */
 export async function getIdentity(): Promise<Identity | null> {
   if (auth0Configured && auth0) {
-    const session = await auth0.getSession();
+    const session = await withDeadline("auth0.getSession", auth0.getSession());
     if (!session?.user?.sub) return null;
     const u = session.user;
     return { sub: u.sub, email: (u.email ?? "").toLowerCase(), name: u.name, picture: u.picture };
@@ -56,8 +57,8 @@ export async function devSignOut() {
 export async function getCurrentUser(): Promise<User | null> {
   const ident = await getIdentity();
   if (!ident) return null;
-  const existing = await db.query.users.findFirst({ where: eq(users.auth0Sub, ident.sub) });
-  const role = await resolveRole(ident.email, existing?.role ?? null);
+  const existing = await withDeadline("users.lookup", db.query.users.findFirst({ where: eq(users.auth0Sub, ident.sub) }));
+  const role = await withDeadline("users.resolveRole", resolveRole(ident.email, existing?.role ?? null));
   if (existing) {
     if (existing.role !== role || (ident.name && existing.name !== ident.name)) {
       const [u] = await db.update(users).set({ role, name: ident.name ?? existing.name }).where(eq(users.id, existing.id)).returning();
