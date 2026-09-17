@@ -1,0 +1,44 @@
+import Link from "next/link";
+import { Wordmark } from "@/components/brand/wordmark";
+
+const links = [
+  { href: "#features", label: "Features" },
+  { href: "#themes", label: "Themes" },
+  { href: "#compare", label: "Compare" },
+  { href: "/demo", label: "Demo store" },
+];
+
+export function LandingNav({ signedIn, loginHref }: { signedIn: boolean; loginHref: string }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--ld-line)] bg-[color-mix(in_srgb,var(--ld-cream)_82%,transparent)] backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+        <Link href="/" className="shrink-0" aria-label="visitmy.shop home">
+          <Wordmark size={22} />
+        </Link>
+        <nav className="hidden items-center gap-7 text-sm font-medium md:flex" aria-label="Primary">
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} className="ld-muted transition-colors hover:text-[var(--ld-ink)]">
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
+          {signedIn ? (
+            <Link href="/app" className="ld-btn ld-btn-sm ld-btn-ink">
+              Open dashboard
+            </Link>
+          ) : (
+            <>
+              <Link href={loginHref} className="ld-btn ld-btn-sm ld-btn-ghost hidden sm:inline-flex">
+                Log in
+              </Link>
+              <Link href={loginHref} className="ld-btn ld-btn-sm ld-btn-primary">
+                Claim your link
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}

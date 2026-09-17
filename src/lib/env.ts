@@ -51,8 +51,10 @@ const schema = z.object({
   META_PIXEL_ID: z.string().optional(),
   META_CAPI_TOKEN: z.string().optional(),
 
-  // Comma-separated admin emails
+  // Comma-separated admin emails (bootstrap); admins can also be added from /admin/team
   ADMIN_EMAILS: z.string().default(""),
+  // The one owner. Can't be removed; only the owner removes admins. Defaults to the first ADMIN_EMAILS entry.
+  OWNER_EMAIL: z.string().optional(),
 });
 
 // Treat empty strings as unset (Vercel imports of .env.example leave blanks), and let
@@ -95,6 +97,7 @@ export const resendConfigured = Boolean(env.RESEND_API_KEY);
 export const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_CONNECT_CLIENT_ID);
 export const paypalConfigured = Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
 export const adminEmails = env.ADMIN_EMAILS.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+export const ownerEmail = (env.OWNER_EMAIL ?? adminEmails[0] ?? "").toLowerCase();
 
 // In production without Auth0 nobody can sign in (the dev bypass is disabled there).
 // Warn rather than throw so `next build` and preview deploys still succeed.

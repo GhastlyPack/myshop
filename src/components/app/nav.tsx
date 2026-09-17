@@ -20,7 +20,7 @@ const items = [
 ];
 
 type NavProps = {
-  user: { email: string; name: string | null; role: "creator" | "admin" };
+  user: { email: string; name: string | null; role: "creator" | "admin" | "owner" };
   store: { username: string; displayName: string } | null;
   logoutHref: string;
 };
@@ -46,7 +46,7 @@ function NavLinks({ user, onNavigate }: { user: NavProps["user"]; onNavigate?: (
           </Link>
         );
       })}
-      {user.role === "admin" && (
+      {(user.role === "admin" || user.role === "owner") && (
         <Link
           href="/admin"
           onClick={onNavigate}

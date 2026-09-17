@@ -67,6 +67,8 @@ const ICON: Record<keyof SocialLinks, (p: IconProps) => React.ReactNode> = {
   website: (p) => <Globe size={20} strokeWidth={1.8} {...p} />,
   email: (p) => <Mail size={20} strokeWidth={1.8} {...p} />,
 };
+/** Icons and labels, exported for the lander's mockups. */
+export { ICON as SOCIAL_ICONS };
 const LABEL: Record<keyof SocialLinks, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",

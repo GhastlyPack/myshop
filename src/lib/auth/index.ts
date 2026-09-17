@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "@/db";
-import { stores, users, type Store, type User } from "@/db/schema";
-import { adminEmails, auth0Configured, env, isProd } from "@/lib/env";
+import { adminInvites, stores, users, type Store, type User } from "@/db/schema";
+import { adminEmails, auth0Configured, env, isProd, ownerEmail } from "@/lib/env";
 import { newId } from "@/lib/ids";
 import { auth0 } from "./auth0";
 
@@ -57,7 +57,7 @@ export async function getCurrentUser(): Promise<User | null> {
   const ident = await getIdentity();
   if (!ident) return null;
   const existing = await db.query.users.findFirst({ where: eq(users.auth0Sub, ident.sub) });
-  const role = adminEmails.includes(ident.email) ? "admin" : (existing?.role ?? "creator");
+  const role = await resolveRole(ident.email, existing?.role ?? null);
   if (existing) {
     if (existing.role !== role || (ident.name && existing.name !== ident.name)) {
       const [u] = await db.update(users).set({ role, name: ident.name ?? existing.name }).where(eq(users.id, existing.id)).returning();
@@ -71,6 +71,19 @@ export async function getCurrentUser(): Promise<User | null> {
     .onConflictDoNothing()
     .returning();
   return created ?? (await db.query.users.findFirst({ where: eq(users.auth0Sub, ident.sub) })) ?? null;
+}
+
+/** Owner from env; admins from env, from /admin/team invites, or already stored. Never demotes. */
+async function resolveRole(email: string, current: User["role"] | null): Promise<User["role"]> {
+  if (ownerEmail && email === ownerEmail) return "owner";
+  if (current === "owner") return "admin"; // owner email changed; keep them admin
+  if (current === "admin" || adminEmails.includes(email)) return "admin";
+  const invite = await db.query.adminInvites.findFirst({ where: eq(adminInvites.email, email), columns: { id: true } });
+  return invite ? "admin" : (current ?? "creator");
+}
+
+export function isAdmin(user: Pick<User, "role"> | null | undefined) {
+  return user?.role === "admin" || user?.role === "owner";
 }
 
 export async function getCurrentStore(): Promise<Store | null> {
@@ -95,7 +108,7 @@ export async function requireStore(): Promise<{ user: User; store: Store }> {
 
 export async function requireAdmin(): Promise<User> {
   const user = await requireUser();
-  if (user.role !== "admin") redirect("/app");
+  if (!isAdmin(user)) redirect("/app");
   return user;
 }
 

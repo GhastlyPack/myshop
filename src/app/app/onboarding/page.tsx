@@ -5,10 +5,12 @@ import { getCurrentStore, requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Claim your store" };
 
-export default async function OnboardingPage() {
-  const user = await requireUser();
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ username?: string | string[] }> }) {
+  const [user, { username: claimed }] = await Promise.all([requireUser(), searchParams]);
   if (await getCurrentStore()) redirect("/app");
-  const suggested = (user.name ?? user.email.split("@")[0] ?? "")
+  // The lander's "claim your link" box passes the name the visitor typed; fall back to their profile.
+  const raw = (typeof claimed === "string" && claimed) || user.name || user.email.split("@")[0] || "";
+  const suggested = raw
     .toLowerCase()
     .replace(/[^a-z0-9._]+/g, "")
     .slice(0, 30);

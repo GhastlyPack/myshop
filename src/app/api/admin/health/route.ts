@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { auth0Configured, resendConfigured, storageDriver, stripeConfigured } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "admin only" }, { status: 403 });
+  if (!isAdmin(user)) return NextResponse.json({ error: "admin only" }, { status: 403 });
 
   const drivers = { auth0: auth0Configured, storage: storageDriver, resend: resendConfigured, stripe: stripeConfigured };
   const t0 = Date.now();

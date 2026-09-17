@@ -22,7 +22,7 @@ const updatedAt = () =>
     .$onUpdate(() => new Date());
 
 // ---------- enums ----------
-export const userRole = pgEnum("user_role", ["creator", "admin"]);
+export const userRole = pgEnum("user_role", ["creator", "admin", "owner"]);
 export const productType = pgEnum("product_type", ["download", "link"]);
 export const productStatus = pgEnum("product_status", ["draft", "published"]);
 export const cardStyle = pgEnum("card_style", ["button", "callout", "preview"]);
@@ -304,6 +304,18 @@ export const buyerSessions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("buyer_sessions_token_idx").on(t.tokenHash)],
+);
+
+/** Admin access granted to an email that hasn't signed in yet; applied on first login. */
+export const adminInvites = pgTable(
+  "admin_invites",
+  {
+    id: id(),
+    email: text("email").notNull(), // lowercase
+    invitedBy: text("invited_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("admin_invites_email_idx").on(t.email)],
 );
 
 // Unused until our own billing (Commas / Stripe app fees) lands.
