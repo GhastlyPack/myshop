@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
-import { Lock } from "lucide-react";
+import { useActionState, useState, useTransition } from "react";
+import { Lock, X } from "lucide-react";
 import type { CustomField } from "@/db/schema";
-import { checkoutAction, type CheckoutState } from "@/app/[username]/[slug]/actions";
+import { applyDiscountAction, checkoutAction, type CheckoutState } from "@/app/[username]/[slug]/actions";
 import { formatPrice } from "./price";
 import { sendBeacon, usePageUrl, useSessionId } from "./session";
 import { trackPixel } from "@/components/meta-pixel";
@@ -19,7 +19,95 @@ type Props = {
   buttonText: string;
   fields: CustomField[];
   marketingOptIn: boolean;
+  /** Order bump offered above the pay button (paid products only). */
+  bump?: BumpOffer | null;
 };
+
+export type BumpOffer = {
+  productId: string;
+  title: string;
+  headline: string;
+  thumbUrl: string | null;
+  /** Full price and what the buyer pays after the creator's % off. */
+  priceCents: number;
+  bumpCents: number;
+};
+
+type Applied = { code: string; discountCents: number };
+
+function DiscountCode({ username, slug, currency, applied, onApply }: { username: string; slug: string; currency: string; applied: Applied | null; onApply: (a: Applied | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  if (applied) {
+    return (
+      <div className="sf-code-applied">
+        <span>
+          <strong style={{ fontFamily: "ui-monospace, monospace", letterSpacing: "0.06em" }}>{applied.code}</strong>
+          <span className="sf-muted"> · −{formatPrice(applied.discountCents, currency)}</span>
+        </span>
+        <button type="button" className="sf-linkbtn inline-flex items-center gap-1" onClick={() => onApply(null)} aria-label="Remove code">
+          <X size={14} /> Remove
+        </button>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <button type="button" className="sf-linkbtn" onClick={() => setOpen(true)}>
+        Have a code?
+      </button>
+    );
+  }
+  function apply() {
+    setError(null);
+    start(async () => {
+      const res = await applyDiscountAction({ username, slug, code });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onApply({ code: res.code, discountCents: res.discountCents });
+      setCode("");
+    });
+  }
+  return (
+    <div className="space-y-2">
+      <label htmlFor="co-code" className="sf-label">
+        Discount code
+      </label>
+      <div className="sf-code-row">
+        <input
+          id="co-code"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              apply();
+            }
+          }}
+          className="sf-input"
+          placeholder="CODE"
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          maxLength={32}
+        />
+        <button type="button" className="sf-btn sf-btn-ghost shrink-0" onClick={apply} disabled={pending || !code.trim()}>
+          {pending ? "Checking…" : "Apply"}
+        </button>
+      </div>
+      {error && (
+        <p className="sf-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function Field({ f }: { f: CustomField }) {
   const id = `f_${f.id}`;
@@ -86,14 +174,19 @@ export function CheckoutForm(p: Props) {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(checkoutAction, null);
   const sessionId = useSessionId();
   const pageUrl = usePageUrl();
+  const [applied, setApplied] = useState<Applied | null>(null);
+  const [bumpOn, setBumpOn] = useState(false);
   const free = p.priceCents === 0;
+  const discount = free ? 0 : Math.min(p.priceCents, applied?.discountCents ?? 0);
+  const bumpCents = p.bump && bumpOn ? p.bump.bumpCents : 0;
+  const total = Math.max(0, p.priceCents - discount + bumpCents);
 
   return (
     <form
       action={action}
       onSubmit={() => {
         sendBeacon({ storeId: p.storeId, productId: p.productId, type: "checkout_start" });
-        trackPixel("InitiateCheckout", { content_ids: [p.productId], currency: p.currency, value: p.priceCents / 100 });
+        trackPixel("InitiateCheckout", { content_ids: [p.productId, ...(p.bump && bumpOn ? [p.bump.productId] : [])], currency: p.currency, value: total / 100 });
       }}
       className="space-y-4"
       noValidate={false}
@@ -102,6 +195,7 @@ export function CheckoutForm(p: Props) {
       <input type="hidden" name="slug" value={p.slug} />
       <input type="hidden" name="sessionId" value={sessionId ?? ""} />
       <input type="hidden" name="pageUrl" value={pageUrl} />
+      {applied && <input type="hidden" name="code" value={applied.code} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -129,6 +223,30 @@ export function CheckoutForm(p: Props) {
         </label>
       )}
 
+      {!free && <DiscountCode username={p.username} slug={p.slug} currency={p.currency} applied={applied} onApply={setApplied} />}
+
+      {!free && p.bump && (
+        <label className="sf-bump">
+          <span className="sf-check">
+            <input type="checkbox" name="bump" checked={bumpOn} onChange={(e) => setBumpOn(e.target.checked)} />
+          </span>
+          {p.bump.thumbUrl && (
+            <span className="sf-thumb sf-bump-thumb">
+              {/* eslint-disable-next-line @next/next/no-img-element -- creator upload */}
+              <img src={p.bump.thumbUrl} alt="" loading="lazy" />
+            </span>
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold leading-snug">{p.bump.headline}</span>
+            <span className="sf-muted block text-sm">{p.bump.title}</span>
+            <span className="mt-1 block text-sm font-semibold">
+              {p.bump.bumpCents < p.bump.priceCents && <span className="sf-strike mr-1.5">{formatPrice(p.bump.priceCents, p.currency)}</span>}
+              {formatPrice(p.bump.bumpCents, p.currency)}
+            </span>
+          </span>
+        </label>
+      )}
+
       {state?.error && (
         <p className="sf-error" role="alert">
           {state.error}
@@ -136,11 +254,11 @@ export function CheckoutForm(p: Props) {
       )}
 
       <button type="submit" className="sf-btn w-full text-base" disabled={pending} style={{ padding: "1rem 1.25rem" }}>
-        {pending ? "One sec…" : free ? p.buttonText : `${p.buttonText} · ${formatPrice(p.priceCents, p.currency)}`}
+        {pending ? "One sec…" : free ? p.buttonText : `${p.buttonText} · ${formatPrice(total, p.currency)}`}
       </button>
       <p className="sf-muted flex items-center justify-center gap-1.5 text-xs">
         <Lock size={12} />
-        {free ? "Instant delivery to your inbox. No spam." : "Secure checkout. Instant delivery after payment."}
+        {free || total === 0 ? "Instant delivery to your inbox. No spam." : "Secure checkout. Instant delivery after payment."}
       </p>
     </form>
   );

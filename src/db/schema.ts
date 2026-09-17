@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import type { Theme } from "@/lib/theme";
 
@@ -139,6 +140,13 @@ export const products = pgTable(
     confirmationBody: text("confirmation_body"),
     status: productStatus("status").notNull().default("draft"),
     position: integer("position").notNull().default(0),
+    /** Limited quantity: null = unlimited. `quantitySold` counts paid orders (main + bump) and is never reserved ahead of payment. */
+    quantityLimit: integer("quantity_limit"),
+    quantitySold: integer("quantity_sold").notNull().default(0),
+    /** Order bump: another paid product from the same store offered as a one-click add-on at checkout. */
+    bumpProductId: text("bump_product_id").references((): AnyPgColumn => products.id, { onDelete: "set null" }),
+    bumpHeadline: text("bump_headline"),
+    bumpDiscountPercent: integer("bump_discount_percent").notNull().default(0),
     /** Archived (soft-deleted). Hidden everywhere, but orders, entitlements and files stay so buyers keep access. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -178,6 +186,26 @@ export const productLinks = pgTable(
   (t) => [index("product_links_product_idx").on(t.productId)],
 );
 
+/** Per-product discount codes. Exactly one of percentOff / amountOffCents is set. */
+export const discountCodes = pgTable(
+  "discount_codes",
+  {
+    id: id(),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    code: text("code").notNull(), // stored uppercase
+    percentOff: integer("percent_off"), // 1..100
+    amountOffCents: integer("amount_off_cents"),
+    maxUses: integer("max_uses"),
+    uses: integer("uses").notNull().default(0), // incremented when the order is paid
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    active: boolean("active").notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("discount_codes_product_code_idx").on(t.productId, t.code), index("discount_codes_product_idx").on(t.productId)],
+);
+
 export const paymentAccounts = pgTable(
   "payment_accounts",
   {
@@ -209,9 +237,14 @@ export const orders = pgTable(
     buyerName: text("buyer_name").notNull(),
     customFields: jsonb("custom_fields").$type<Record<string, string | string[] | boolean>>().notNull().default({}),
     marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
+    /** Total charged: product price − discount + bump. Income / analytics sum this column. */
     amountCents: integer("amount_cents").notNull().default(0),
     currency: text("currency").notNull().default("usd"),
     platformFeeCents: integer("platform_fee_cents").notNull().default(0),
+    discountCode: text("discount_code"),
+    discountCents: integer("discount_cents").notNull().default(0),
+    bumpProductId: text("bump_product_id").references(() => products.id, { onDelete: "set null" }),
+    bumpCents: integer("bump_cents").notNull().default(0),
     provider: orderProvider("provider").notNull().default("free"),
     providerRef: text("provider_ref"), // checkout session / payment intent / paypal order id
     status: orderStatus("status").notNull().default("pending"),
@@ -357,6 +390,7 @@ export type Section = typeof sections.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type ProductFile = typeof productFiles.$inferSelect;
 export type ProductLink = typeof productLinks.$inferSelect;
+export type DiscountCode = typeof discountCodes.$inferSelect;
 export type PaymentAccount = typeof paymentAccounts.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type Entitlement = typeof entitlements.$inferSelect;

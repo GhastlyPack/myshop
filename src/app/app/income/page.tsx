@@ -103,13 +103,21 @@ export default async function IncomePage({
                 {rows.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="whitespace-nowrap text-muted-foreground"><LocalTime date={o.createdAt} /></TableCell>
-                    <TableCell className="max-w-[16rem] truncate font-medium">{o.productTitle}</TableCell>
+                    <TableCell className="max-w-[16rem]">
+                      <div className="truncate font-medium">{o.productTitle}</div>
+                      {o.bumpProductTitle && <div className="truncate text-xs text-muted-foreground">+ {o.bumpProductTitle}</div>}
+                    </TableCell>
                     <TableCell>
                       <div className="truncate">{o.buyerName || "—"}</div>
                       <div className="truncate text-xs text-muted-foreground">{o.buyerEmail}</div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right tabular-nums">
                       {o.provider === "free" || o.amountCents === 0 ? <span className="text-muted-foreground">Free</span> : formatMoney(o.amountCents, o.currency)}
+                      {o.discountCode && (
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-mono">{o.discountCode}</span> · −{formatMoney(o.discountCents, o.currency)}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="hidden capitalize text-muted-foreground md:table-cell">{o.provider}</TableCell>
                     <TableCell>

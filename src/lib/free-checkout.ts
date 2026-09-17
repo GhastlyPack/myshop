@@ -1,7 +1,8 @@
 import "server-only";
 import { db } from "@/db";
 import { entitlements, orders, type Product, type ProductFile, type ProductLink, type Store, type TrafficSource } from "@/db/schema";
-import { renderDeliveryEmail } from "@/emails/delivery";
+import { renderDeliveryEmailProducts } from "@/emails/delivery";
+import { recordSale } from "@/lib/commerce";
 import { env } from "@/lib/env";
 import { newId, newToken } from "@/lib/ids";
 import { sendMail } from "@/lib/mailer";
@@ -45,13 +46,17 @@ export type ClaimInput = {
   userAgent?: string | null;
   /** Absolute product page URL, used as the CAPI event source. */
   pageUrl?: string | null;
+  /** A validated discount code that brings a paid product to $0 (then it's claimed like a free one). */
+  discount?: { code: string; cents: number } | null;
 };
 
 export type ClaimResult = { ok: true; token: string } | { ok: false; error: string };
 
 export async function claimFreeProduct(input: ClaimInput): Promise<ClaimResult> {
   const { store, product } = input;
-  if (product.priceCents !== 0) return { ok: false, error: "This product isn't free." };
+  const discountCents = input.discount?.cents ?? 0;
+  if (product.priceCents - discountCents !== 0) return { ok: false, error: "This product isn't free." };
+  if (product.quantityLimit != null && product.quantitySold >= product.quantityLimit) return { ok: false, error: "This product is sold out." };
   const email = input.buyerEmail.trim().toLowerCase();
   if (rateLimited(`${input.ip ?? "?"}|${email}`)) return { ok: false, error: "Too many requests. Try again in a minute." };
 
@@ -68,12 +73,15 @@ export async function claimFreeProduct(input: ClaimInput): Promise<ClaimResult> 
       marketingOptIn: input.marketingOptIn,
       amountCents: 0,
       currency: product.currency,
+      discountCode: input.discount?.code ?? null,
+      discountCents,
       provider: "free",
       status: "paid",
       source: input.source,
     });
     await tx.insert(entitlements).values({ id: newId("ent"), orderId, productId: product.id, buyerEmail: email, token });
   });
+  await recordSale({ id: orderId, productId: product.id, bumpProductId: null, discountCode: input.discount?.code ?? null }, store.username);
 
   await sendDeliveryEmail({ store, product, files: input.files, links: input.links, buyerName: input.buyerName, buyerEmail: email, token, isPaid: false });
   await track({ storeId: store.id, productId: product.id, type: "lead", sessionId: input.sessionId, source: input.source });
@@ -85,7 +93,39 @@ export async function claimFreeProduct(input: ClaimInput): Promise<ClaimResult> 
   return { ok: true, token };
 }
 
-/** Shared by the free flow and (via Package D) the paid webhook. Never throws. */
+export type DeliveryItem = { product: Product; files: ProductFile[]; links: ProductLink[]; token: string };
+
+/**
+ * One email for every product on the order (main first, then the bump). The first
+ * product's confirmation subject/body is used. Never throws.
+ */
+export async function sendDeliveryEmailProducts(p: { store: Store; items: DeliveryItem[]; buyerName: string; buyerEmail: string; isPaid: boolean }) {
+  const main = p.items[0];
+  if (!main) return;
+  try {
+    const mail = await renderDeliveryEmailProducts({
+      storeName: p.store.displayName,
+      storeUsername: p.store.username,
+      buyerName: p.buyerName,
+      buyerEmail: p.buyerEmail,
+      products: p.items.map((it) => ({
+        title: it.product.title,
+        token: it.token,
+        files: it.files.map((f) => ({ id: f.id, filename: f.filename })),
+        links: it.links.map((l) => ({ url: l.url, label: l.label })),
+      })),
+      baseUrl: env.APP_BASE_URL,
+      confirmationSubject: main.product.confirmationSubject,
+      confirmationBody: main.product.confirmationBody,
+      isPaid: p.isPaid,
+    });
+    await sendMail({ to: p.buyerEmail, ...mail });
+  } catch (e) {
+    console.error("[delivery email] failed", e);
+  }
+}
+
+/** Single-product wrapper shared by the free flow and (via Package D) the paid webhook. Never throws. */
 export async function sendDeliveryEmail(p: {
   store: Store;
   product: Product;
@@ -96,23 +136,11 @@ export async function sendDeliveryEmail(p: {
   token: string;
   isPaid: boolean;
 }) {
-  try {
-    const mail = await renderDeliveryEmail({
-      storeName: p.store.displayName,
-      storeUsername: p.store.username,
-      productTitle: p.product.title,
-      buyerName: p.buyerName,
-      buyerEmail: p.buyerEmail,
-      token: p.token,
-      files: p.files.map((f) => ({ id: f.id, filename: f.filename })),
-      links: p.links.map((l) => ({ url: l.url, label: l.label })),
-      baseUrl: env.APP_BASE_URL,
-      confirmationSubject: p.product.confirmationSubject,
-      confirmationBody: p.product.confirmationBody,
-      isPaid: p.isPaid,
-    });
-    await sendMail({ to: p.buyerEmail, ...mail });
-  } catch (e) {
-    console.error("[delivery email] failed", e);
-  }
+  return sendDeliveryEmailProducts({
+    store: p.store,
+    items: [{ product: p.product, files: p.files, links: p.links, token: p.token }],
+    buyerName: p.buyerName,
+    buyerEmail: p.buyerEmail,
+    isPaid: p.isPaid,
+  });
 }

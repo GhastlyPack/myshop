@@ -66,6 +66,7 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
       bannerUrl: publicUrl(p.bannerKey),
       href: ext ? ext.url : `/${store.username}/${p.slug}`,
       external: Boolean(ext),
+      remaining: p.quantityLimit == null ? null : Math.max(0, p.quantityLimit - p.quantitySold),
     };
   };
 

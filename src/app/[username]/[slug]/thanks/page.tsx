@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { ArrowUpRight, Download, Inbox } from "lucide-react";
 import { db } from "@/db";
 import { entitlements, orders, productFiles, productLinks, products, reviews, stores } from "@/db/schema";
@@ -27,6 +27,7 @@ function fmtBytes(n: number) {
 /**
  * Post-checkout page. `?e=<entitlement token>` (free flow, or paid once the webhook ran)
  * or `?o=<order id>` (paid flow success URL before the entitlement exists).
+ * Lists every entitlement on the order: the product bought plus the order bump, if any.
  */
 export default async function ThanksPage({ params, searchParams }: Props) {
   const [{ username, slug }, sp] = await Promise.all([params, searchParams]);
@@ -34,10 +35,13 @@ export default async function ThanksPage({ params, searchParams }: Props) {
   const orderId = sp.o?.slice(0, 64);
   if (!token && !orderId) notFound();
 
-  let ent = token ? await db.query.entitlements.findFirst({ where: and(eq(entitlements.token, token), eq(entitlements.revoked, false)) }) : undefined;
-  const order = ent ? await db.query.orders.findFirst({ where: eq(orders.id, ent.orderId) }) : orderId ? await db.query.orders.findFirst({ where: eq(orders.id, orderId) }) : undefined;
+  const byToken = token ? await db.query.entitlements.findFirst({ where: and(eq(entitlements.token, token), eq(entitlements.revoked, false)) }) : undefined;
+  const order = byToken ? await db.query.orders.findFirst({ where: eq(orders.id, byToken.orderId) }) : orderId ? await db.query.orders.findFirst({ where: eq(orders.id, orderId) }) : undefined;
   if (!order) notFound();
-  if (!ent && order.status === "paid") ent = await db.query.entitlements.findFirst({ where: and(eq(entitlements.orderId, order.id), eq(entitlements.revoked, false)) });
+  const ents = order.status === "paid" ? await db.select().from(entitlements).where(and(eq(entitlements.orderId, order.id), eq(entitlements.revoked, false))).orderBy(asc(entitlements.createdAt)) : [];
+  // Main product first, then the bump.
+  ents.sort((a, b) => (a.productId === order.productId ? -1 : b.productId === order.productId ? 1 : 0));
+  const ent = ents.find((e) => e.productId === order.productId) ?? ents[0];
 
   const [store, product] = await Promise.all([
     db.query.stores.findFirst({ where: eq(stores.id, order.storeId) }),
@@ -47,13 +51,24 @@ export default async function ThanksPage({ params, searchParams }: Props) {
   const theme = resolveTheme(store.theme);
 
   const paid = order.status === "paid" && ent;
-  const [files, links, existing] = paid
+  const productIds = ents.map((e) => e.productId);
+  const [allProducts, files, links, existing] = paid
     ? await Promise.all([
-        db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),
-        db.select().from(productLinks).where(eq(productLinks.productId, product.id)).orderBy(asc(productLinks.position)),
+        db.select().from(products).where(inArray(products.id, productIds)),
+        db.select().from(productFiles).where(inArray(productFiles.productId, productIds)).orderBy(asc(productFiles.position)),
+        db.select().from(productLinks).where(inArray(productLinks.productId, productIds)).orderBy(asc(productLinks.position)),
         db.query.reviews.findFirst({ where: eq(reviews.orderId, order.id) }),
       ])
-    : [[], [], undefined];
+    : [[], [], [], undefined];
+  const items = ents
+    .map((e) => ({
+      ent: e,
+      product: allProducts.find((p) => p.id === e.productId),
+      files: files.filter((f) => f.productId === e.productId),
+      links: links.filter((l) => l.productId === e.productId),
+    }))
+    .filter((it): it is typeof it & { product: NonNullable<typeof it.product> } => Boolean(it.product));
+  const hasContent = items.some((it) => it.files.length > 0 || it.links.length > 0);
 
   return (
     <ThemeRoot theme={theme}>
@@ -65,7 +80,7 @@ export default async function ThanksPage({ params, searchParams }: Props) {
             <PixelEvent
               event={order.amountCents === 0 ? "Lead" : "Purchase"}
               eventId={order.id}
-              params={{ content_ids: [product.id], content_name: product.title, content_type: "product", currency: order.currency, value: order.amountCents / 100 }}
+              params={{ content_ids: productIds, content_name: product.title, content_type: "product", currency: order.currency, value: order.amountCents / 100 }}
             />
           )}
           {(order.status === "failed" || order.status === "refunded") && (
@@ -85,6 +100,7 @@ export default async function ThanksPage({ params, searchParams }: Props) {
               <section className="sf-rise">
                 <p className="sf-chip mb-3">{order.amountCents === 0 ? "It's yours" : "Payment confirmed"}</p>
                 <h1 className="sf-heading text-[1.9rem] sm:text-[2.2rem]">{product.title}</h1>
+                {items.length > 1 && <p className="sf-muted mt-1 text-[0.95rem]">Plus {items.slice(1).map((it) => it.product.title).join(", ")}</p>}
                 <p className="sf-muted mt-2 flex items-start gap-2 text-[0.95rem]">
                   <Inbox size={18} className="mt-0.5 shrink-0" />
                   <span>
@@ -93,34 +109,36 @@ export default async function ThanksPage({ params, searchParams }: Props) {
                 </p>
               </section>
 
-              {(files.length > 0 || links.length > 0) && (
-                <section className="sf-rise space-y-3" style={{ animationDelay: "80ms" }}>
-                  {files.map((f) => (
-                    <a key={f.id} href={`/d/${ent.token}?f=${encodeURIComponent(f.id)}`} className="sf-card flex items-center gap-4 p-4 sm:p-5">
-                      <span className="sf-btn shrink-0" style={{ padding: "0.8rem" }} aria-hidden>
-                        <Download size={20} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{f.filename}</span>
-                        <span className="sf-muted block text-sm">
-                          Download{f.bytes ? ` · ${fmtBytes(f.bytes)}` : ""}
+              {hasContent &&
+                items.map((it, i) => (
+                  <section key={it.ent.id} className="sf-rise space-y-3" style={{ animationDelay: `${80 + i * 40}ms` }}>
+                    {items.length > 1 && <h2 className="sf-heading text-[1.05rem]">{it.product.title}</h2>}
+                    {it.files.map((f) => (
+                      <a key={f.id} href={`/d/${it.ent.token}?f=${encodeURIComponent(f.id)}`} className="sf-card flex items-center gap-4 p-4 sm:p-5">
+                        <span className="sf-btn shrink-0" style={{ padding: "0.8rem" }} aria-hidden>
+                          <Download size={20} />
                         </span>
-                      </span>
-                    </a>
-                  ))}
-                  {links.map((l) => (
-                    <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="sf-card flex items-center gap-4 p-4 sm:p-5">
-                      <span className="sf-btn sf-btn-ghost shrink-0" style={{ padding: "0.8rem" }} aria-hidden>
-                        <ArrowUpRight size={20} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{l.label}</span>
-                        <span className="sf-muted block truncate text-sm">{l.url.replace(/^https?:\/\//, "")}</span>
-                      </span>
-                    </a>
-                  ))}
-                </section>
-              )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold">{f.filename}</span>
+                          <span className="sf-muted block text-sm">
+                            Download{f.bytes ? ` · ${fmtBytes(f.bytes)}` : ""}
+                          </span>
+                        </span>
+                      </a>
+                    ))}
+                    {it.links.map((l) => (
+                      <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="sf-card flex items-center gap-4 p-4 sm:p-5">
+                        <span className="sf-btn sf-btn-ghost shrink-0" style={{ padding: "0.8rem" }} aria-hidden>
+                          <ArrowUpRight size={20} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold">{l.label}</span>
+                          <span className="sf-muted block truncate text-sm">{l.url.replace(/^https?:\/\//, "")}</span>
+                        </span>
+                      </a>
+                    ))}
+                  </section>
+                ))}
 
               <p className="sf-muted text-center text-sm">
                 <Link href="/me" className="sf-link">

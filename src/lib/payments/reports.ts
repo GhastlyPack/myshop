@@ -1,7 +1,11 @@
 import "server-only";
 import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { orders, products } from "@/db/schema";
+
+/** Second join on products for the order bump. */
+const bumpProducts = alias(products, "bump_products");
 
 /**
  * Read models for /app/income and /app/customers (+ their CSV exports).
@@ -50,6 +54,10 @@ export type OrderRow = {
   providerRef: string | null;
   status: OrderStatus;
   marketingOptIn: boolean;
+  discountCode: string | null;
+  discountCents: number;
+  bumpProductTitle: string | null;
+  bumpCents: number;
 };
 
 export async function listOrders(
@@ -74,9 +82,14 @@ export async function listOrders(
       providerRef: orders.providerRef,
       status: orders.status,
       marketingOptIn: orders.marketingOptIn,
+      discountCode: orders.discountCode,
+      discountCents: orders.discountCents,
+      bumpProductTitle: bumpProducts.title,
+      bumpCents: orders.bumpCents,
     })
     .from(orders)
     .innerJoin(products, eq(products.id, orders.productId))
+    .leftJoin(bumpProducts, eq(bumpProducts.id, orders.bumpProductId))
     .where(and(...conds))
     .orderBy(desc(orders.createdAt), desc(orders.id))
     .limit(opts.limit ?? 200)

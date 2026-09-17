@@ -34,7 +34,31 @@ export const productInputSchema = z.object({
   confirmationBody: z.string().max(10000),
   listed: z.boolean(),
   dmKeyword: z.string().trim().max(40, "Keep the keyword under 40 characters."),
+  /** Limited quantity; null = unlimited. */
+  quantityLimit: z.number().int().min(1, "Limit must be at least 1.").max(1_000_000).nullable(),
+  /** Order bump: another paid product from the same store. */
+  bumpProductId: z.string().max(64).nullable(),
+  bumpHeadline: z.string().trim().max(120, "Keep the headline under 120 characters."),
+  bumpDiscountPercent: z.number().int().min(0).max(100, "Enter 0 to 100."),
 });
+
+/** Discount code form, shared by the editor and its server actions. */
+export const discountCodeInputSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(2, "Codes need at least 2 characters.")
+    .max(32, "Keep codes under 32 characters.")
+    .regex(/^[A-Z0-9_-]+$/, "Letters, numbers, dashes and underscores only."),
+  kind: z.enum(["percent", "amount"]),
+  /** Percent (1..100) or cents, depending on `kind`. */
+  value: z.number().int().min(1, "Enter a value."),
+  maxUses: z.number().int().min(1).max(1_000_000).nullable(),
+  /** ISO date (yyyy-mm-dd) or null. */
+  expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.").nullable(),
+});
+export type DiscountCodeInput = z.input<typeof discountCodeInputSchema>;
 export type ProductInput = z.input<typeof productInputSchema>;
 
 export function toSlug(s: string) {

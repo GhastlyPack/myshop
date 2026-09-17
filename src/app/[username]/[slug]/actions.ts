@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { orders, type CustomField, type TrafficSource } from "@/db/schema";
+import { bumpPrice, computeTotals, findDiscount, liveAvailability, normalizeCode, resolveBump } from "@/lib/commerce";
 import { env } from "@/lib/env";
 import { claimFreeProduct } from "@/lib/free-checkout";
 import { newId } from "@/lib/ids";
@@ -15,6 +16,20 @@ import { sourceFromRequest } from "@/lib/track";
 
 export type CheckoutState = { error?: string } | null;
 
+export type ApplyCodeResult = { ok: true; code: string; discountCents: number } | { ok: false; error: string };
+
+/** "Have a code?" → validates a discount code for a paid product and returns what it takes off. */
+export async function applyDiscountAction(input: { username: string; slug: string; code: string }): Promise<ApplyCodeResult> {
+  const parsed = z.object({ username: z.string().min(1).max(40), slug: z.string().min(1).max(120), code: z.string().max(40) }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Enter a code." };
+  const data = await getPublicProduct(parsed.data.username, parsed.data.slug);
+  if (!data) return { ok: false, error: "This product is no longer available." };
+  if (data.product.priceCents <= 0) return { ok: false, error: "Codes only apply to paid products." };
+  const res = await findDiscount(data.product, parsed.data.code);
+  if (!res.ok) return res;
+  return { ok: true, code: res.code.code, discountCents: res.discountCents };
+}
+
 const baseSchema = z.object({
   username: z.string().min(1).max(40),
   slug: z.string().min(1).max(120),
@@ -22,6 +37,7 @@ const baseSchema = z.object({
   email: z.string().trim().toLowerCase().email("Please enter a valid email").max(200),
   sessionId: z.string().max(64).optional(),
   pageUrl: z.string().max(2000).optional(),
+  code: z.string().max(40).optional(),
 });
 
 function readFields(defs: CustomField[], fd: FormData): { values: Record<string, string | string[] | boolean>; error?: string } {
@@ -54,6 +70,7 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     email: fd.get("email"),
     sessionId: fd.get("sessionId") || undefined,
     pageUrl: fd.get("pageUrl") || undefined,
+    code: fd.get("code") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the form" };
   const { username, slug, name, email, sessionId, pageUrl } = parsed.data;
@@ -61,6 +78,22 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
   const data = await getPublicProduct(username, slug);
   if (!data) return { error: "This product is no longer available." };
   const { store, product, files, links } = data;
+
+  // Availability is read live (the storefront query is cached) so a sold-out product can't be bought.
+  const availability = await liveAvailability(product.id);
+  if (availability.soldOut) return { error: "This product is sold out." };
+
+  // Pricing is recomputed here; the client's total is never trusted.
+  let discount: { code: string; cents: number } | null = null;
+  if (product.priceCents > 0 && parsed.data.code && normalizeCode(parsed.data.code)) {
+    const res = await findDiscount(product, parsed.data.code);
+    if (!res.ok) return { error: res.error };
+    discount = { code: res.code.code, cents: res.discountCents };
+  }
+  const bumpWanted = fd.get("bump") === "on";
+  const bump = bumpWanted && product.priceCents > 0 ? await resolveBump(product) : null;
+  const bumpCents = bump ? bumpPrice(bump, product.bumpDiscountPercent) : 0;
+  const totals = computeTotals(product.priceCents, discount?.cents ?? 0, bumpCents);
 
   const fields = readFields(product.fields, fd);
   if (fields.error) return { error: fields.error };
@@ -75,8 +108,24 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     if (source.referrer && source.referrer === new URL(env.APP_BASE_URL).hostname) delete source.referrer;
   } catch {}
 
-  if (product.priceCents === 0) {
-    const res = await claimFreeProduct({ store, product, files, links, buyerName: name, buyerEmail: email, customFields: fields.values, marketingOptIn, source, sessionId, ip, userAgent: h.get("user-agent"), pageUrl: pageUrl ?? null });
+  // Free product, or a code that brings the price to $0 (with no bump): claim it outright.
+  if (totals.totalCents === 0) {
+    const res = await claimFreeProduct({
+      store,
+      product,
+      files,
+      links,
+      buyerName: name,
+      buyerEmail: email,
+      customFields: fields.values,
+      marketingOptIn,
+      source,
+      sessionId,
+      ip,
+      userAgent: h.get("user-agent"),
+      pageUrl: pageUrl ?? null,
+      discount,
+    });
     if (!res.ok) return { error: res.error };
     redirect(`/${store.username}/${product.slug}/thanks?e=${res.token}`);
   }
@@ -91,8 +140,12 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     buyerName: name,
     customFields: fields.values,
     marketingOptIn,
-    amountCents: product.priceCents,
+    amountCents: totals.totalCents,
     currency: product.currency,
+    discountCode: discount?.code ?? null,
+    discountCents: totals.discountCents,
+    bumpProductId: bump?.id ?? null,
+    bumpCents: totals.bumpCents,
     provider: "stripe",
     status: "pending",
     source,
@@ -101,7 +154,8 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     orderId,
     storeId: store.id,
     productId: product.id,
-    amountCents: product.priceCents,
+    amountCents: product.priceCents - totals.discountCents,
+    bump: bump ? { productId: bump.id, title: bump.title, amountCents: totals.bumpCents } : null,
     currency: product.currency,
     buyerEmail: email,
     buyerName: name,

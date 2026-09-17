@@ -13,7 +13,9 @@ import assert from "node:assert/strict";
 import { and, eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "../src/db";
-import { entitlements, events, orders, paymentAccounts, products, stores, users } from "../src/db/schema";
+import { discountCodes, entitlements, events, orders, paymentAccounts, products, stores, users } from "../src/db/schema";
+import { checkDiscount, computeTotals, discountAmount, liveAvailability, remainingUnits } from "../src/lib/commerce";
+import { claimFreeProduct } from "../src/lib/free-checkout";
 import { newId } from "../src/lib/ids";
 import { readOutbox } from "../src/lib/mailer";
 import { startPaidCheckout, storeCanTakePayments } from "../src/lib/payments/checkout";
@@ -36,7 +38,7 @@ function fakeSession(id: string, params: Stripe.Checkout.SessionCreateParams): S
     payment_intent: `pi_${id.slice(3)}`,
     client_reference_id: params.client_reference_id ?? null,
     metadata: (params.metadata ?? null) as Stripe.Metadata | null,
-    amount_total: params.line_items?.[0]?.price_data?.unit_amount ?? null,
+    amount_total: (params.line_items ?? []).reduce((sum, li) => sum + (li.price_data?.unit_amount ?? 0) * (li.quantity ?? 1), 0),
     currency: params.line_items?.[0]?.price_data?.currency ?? null,
     livemode: false,
   } as unknown as Stripe.Checkout.Session;
@@ -103,17 +105,19 @@ const ACCT = "acct_test_packaged";
 const uid = newId("usr");
 const sid = newId("sto");
 const pid = newId("prd");
+const bumpPid = newId("prd");
 const username = `dtest${Date.now().toString(36)}`;
 
 async function setup() {
   await db.insert(users).values({ id: uid, auth0Sub: `dev|${uid}`, email: `${uid}@example.com`, name: "Test Creator" });
   await db.insert(stores).values({ id: sid, userId: uid, username, displayName: "Test Store", theme: {} as never });
   await db.insert(products).values({ id: pid, storeId: sid, slug: "guide", title: "Growth Guide", priceCents: 1900, status: "published" });
+  await db.insert(products).values({ id: bumpPid, storeId: sid, slug: "templates", title: "Caption Templates", priceCents: 900, status: "published" });
 }
 async function teardown() {
   await db.delete(users).where(eq(users.id, uid)); // cascades store → products/orders/entitlements/events/payment_accounts
 }
-async function newOrder(amount = 1900) {
+async function newOrder(amount = 1900, extra: Partial<typeof orders.$inferInsert> = {}) {
   const id = newId("ord");
   await db.insert(orders).values({
     id,
@@ -127,9 +131,12 @@ async function newOrder(amount = 1900) {
     status: "pending",
     marketingOptIn: true,
     source: { src: "ig" },
+    ...extra,
   });
   return id;
 }
+const product = (id: string) => db.query.products.findFirst({ where: eq(products.id, id) });
+const storeRow = () => db.query.stores.findFirst({ where: eq(stores.id, sid) });
 const order = (id: string) => db.query.orders.findFirst({ where: eq(orders.id, id) });
 const ents = (id: string) => db.select().from(entitlements).where(eq(entitlements.orderId, id));
 const checkoutInput = (orderId: string, platformFeeBps = 0) => ({
@@ -367,6 +374,163 @@ async function main() {
       const r = await handleStripeEvent(event("payment_intent.created", { id: "pi_x" }));
       assert.equal(r.handled, false);
       assert.equal(r.action, "ignored");
+    });
+
+    // ---------- commerce features ----------
+    // The account was deauthorized above; reconnect so paid checkouts work again.
+    await db.insert(paymentAccounts).values({ id: newId("pay"), storeId: sid, provider: "stripe", externalId: ACCT, chargesEnabled: true, details: {} });
+
+    await test("discount code: validation rules and session amount", async () => {
+      const [dc] = await db
+        .insert(discountCodes)
+        .values({ id: newId("dsc"), productId: pid, code: "LAUNCH20", percentOff: 20, maxUses: 2 })
+        .returning();
+      assert.equal(discountAmount(1900, dc), 380);
+      assert.equal(discountAmount(1900, { percentOff: null, amountOffCents: 5000 }), 1900, "amount off is capped at the price");
+      const ok = checkDiscount({ priceCents: 1900 }, dc);
+      assert.ok(ok.ok && ok.discountCents === 380);
+      assert.equal(checkDiscount({ priceCents: 1900 }, { ...dc, active: false }).ok, false);
+      assert.equal(checkDiscount({ priceCents: 1900 }, { ...dc, expiresAt: new Date(Date.now() - 1000) }).ok, false);
+      assert.equal(checkDiscount({ priceCents: 1900 }, { ...dc, uses: 2 }).ok, false);
+      assert.equal(checkDiscount({ priceCents: 0 }, dc).ok, false, "free products ignore codes");
+      assert.equal(checkDiscount({ priceCents: 100 }, { ...dc, percentOff: 70 }).ok, false, "can't land between $0.01 and $0.49");
+      assert.deepEqual(computeTotals(1900, 380, 0), { priceCents: 1900, discountCents: 380, bumpCents: 0, totalCents: 1520 });
+
+      // The checkout action passes the discounted amount; the Stripe line item and the order carry it.
+      const o = await newOrder(1520, { discountCode: "LAUNCH20", discountCents: 380 });
+      const r = await startPaidCheckout({ ...checkoutInput(o), amountCents: 1520 });
+      assert.ok(r.ok);
+      if (!r.ok) return;
+      const p = last("checkout.sessions.create")!.params as Stripe.Checkout.SessionCreateParams;
+      assert.equal(p.line_items?.[0]?.price_data?.unit_amount, 1520);
+      assert.equal(p.line_items?.length, 1);
+      assert.equal((await order(o))?.amountCents, 1520);
+
+      // Paid → uses increments (guarded by max_uses).
+      const s = sessions.get(r.session.providerRef)!;
+      await handleStripeEvent(event("checkout.session.completed", { ...s, payment_status: "paid" }));
+      const after = await order(o);
+      assert.equal(after?.status, "paid");
+      assert.equal(after?.amountCents, 1520);
+      assert.equal(after?.discountCode, "LAUNCH20");
+      assert.equal((await db.query.discountCodes.findFirst({ where: eq(discountCodes.id, dc.id) }))?.uses, 1);
+      await db.update(discountCodes).set({ uses: 2 }).where(eq(discountCodes.id, dc.id));
+      const o2 = await newOrder(1520, { discountCode: "LAUNCH20", discountCents: 380 });
+      const r2 = await startPaidCheckout({ ...checkoutInput(o2), amountCents: 1520 });
+      assert.ok(r2.ok);
+      if (!r2.ok) return;
+      await handleStripeEvent(event("checkout.session.completed", { ...sessions.get(r2.session.providerRef)!, payment_status: "paid" }));
+      assert.equal((await order(o2))?.status, "paid", "the buyer paid, so the order is still paid");
+      assert.equal((await db.query.discountCodes.findFirst({ where: eq(discountCodes.id, dc.id) }))?.uses, 2, "never over max_uses");
+    });
+
+    await test("discount to $0 becomes a free claim with an immediate entitlement", async () => {
+      const [dc] = await db.insert(discountCodes).values({ id: newId("dsc"), productId: pid, code: "FREEBIE", percentOff: 100 }).returning();
+      const store = (await storeRow())!;
+      const prod = (await product(pid))!;
+      const chk = checkDiscount(prod, dc);
+      assert.ok(chk.ok && chk.discountCents === 1900);
+      assert.equal(computeTotals(1900, 1900, 0).totalCents, 0);
+      const before = (await readOutbox(5)).length;
+      const res = await claimFreeProduct({
+        store,
+        product: prod,
+        files: [],
+        links: [],
+        buyerName: "Sam Free",
+        buyerEmail: "sam@example.com",
+        customFields: {},
+        marketingOptIn: false,
+        source: {},
+        discount: { code: "FREEBIE", cents: 1900 },
+      });
+      assert.ok(res.ok, "claim should succeed");
+      if (!res.ok) return;
+      const ent = await db.query.entitlements.findFirst({ where: eq(entitlements.token, res.token) });
+      assert.ok(ent);
+      const o = (await order(ent!.orderId))!;
+      assert.equal(o.provider, "free");
+      assert.equal(o.status, "paid");
+      assert.equal(o.amountCents, 0);
+      assert.equal(o.discountCode, "FREEBIE");
+      assert.equal(o.discountCents, 1900);
+      assert.equal((await db.query.discountCodes.findFirst({ where: eq(discountCodes.id, dc.id) }))?.uses, 1);
+      const mails = await readOutbox(5);
+      assert.ok(mails.length >= Math.min(before + 1, 5));
+      assert.equal(mails[0].to, "sam@example.com");
+      // Without a code a paid product is still not claimable.
+      const nope = await claimFreeProduct({ store, product: prod, files: [], links: [], buyerName: "X", buyerEmail: "x@example.com", customFields: {}, marketingOptIn: false, source: {} });
+      assert.equal(nope.ok, false);
+    });
+
+    await test("quantity_sold increments on paid and the product stops selling at the limit", async () => {
+      const sold = (await product(pid))!.quantitySold;
+      await db.update(products).set({ quantityLimit: sold + 1 }).where(eq(products.id, pid));
+      assert.equal(remainingUnits((await product(pid))!), 1);
+      assert.deepEqual(await liveAvailability(pid), { soldOut: false, remaining: 1 });
+
+      const o = await newOrder();
+      const r = await startPaidCheckout(checkoutInput(o));
+      assert.ok(r.ok);
+      if (!r.ok) return;
+      await handleStripeEvent(event("checkout.session.completed", { ...sessions.get(r.session.providerRef)!, payment_status: "paid" }));
+      assert.equal((await product(pid))!.quantitySold, sold + 1);
+      assert.deepEqual(await liveAvailability(pid), { soldOut: true, remaining: 0 });
+      // Duplicate delivery must not count twice.
+      await handleStripeEvent(event("checkout.session.completed", { ...sessions.get(r.session.providerRef)!, payment_status: "paid" }));
+      assert.equal((await product(pid))!.quantitySold, sold + 1);
+      // Free claims refuse a sold-out product too.
+      await db.update(products).set({ priceCents: 0 }).where(eq(products.id, pid));
+      const claim = await claimFreeProduct({ store: (await storeRow())!, product: (await product(pid))!, files: [], links: [], buyerName: "L", buyerEmail: "late@example.com", customFields: {}, marketingOptIn: false, source: {} });
+      assert.equal(claim.ok, false);
+      if (!claim.ok) assert.match(claim.error, /sold out/i);
+      await db.update(products).set({ priceCents: 1900, quantityLimit: null }).where(eq(products.id, pid));
+    });
+
+    let bumpOrder = "";
+    await test("order bump adds a second line item, a second entitlement and both in the email", async () => {
+      bumpOrder = await newOrder(1900 + 720, { bumpProductId: bumpPid, bumpCents: 720 });
+      const r = await startPaidCheckout({ ...checkoutInput(bumpOrder), bump: { productId: bumpPid, title: "Caption Templates", amountCents: 720 } });
+      assert.ok(r.ok);
+      if (!r.ok) return;
+      const p = last("checkout.sessions.create")!.params as Stripe.Checkout.SessionCreateParams;
+      assert.equal(p.line_items?.length, 2);
+      assert.equal(p.line_items?.[0]?.price_data?.unit_amount, 1900);
+      assert.equal(p.line_items?.[1]?.price_data?.unit_amount, 720);
+      assert.equal(p.line_items?.[1]?.price_data?.product_data?.name, "Caption Templates");
+      let o = (await order(bumpOrder))!;
+      assert.equal(o.amountCents, 2620);
+      assert.equal(o.bumpProductId, bumpPid);
+      assert.equal(o.bumpCents, 720);
+
+      const bumpSoldBefore = (await product(bumpPid))!.quantitySold;
+      const res = await handleStripeEvent(event("checkout.session.completed", { ...sessions.get(r.session.providerRef)!, payment_status: "paid" }));
+      assert.equal(res.action, "paid");
+      o = (await order(bumpOrder))!;
+      assert.equal(o.status, "paid");
+      assert.equal(o.amountCents, 2620);
+      const e = await ents(bumpOrder);
+      assert.equal(e.length, 2);
+      assert.deepEqual(new Set(e.map((x) => x.productId)), new Set([pid, bumpPid]));
+      assert.notEqual(e[0].token, e[1].token);
+      assert.equal((await product(bumpPid))!.quantitySold, bumpSoldBefore + 1, "the bump product counts as sold too");
+      const mail = (await readOutbox(1))[0];
+      assert.equal(mail.to, o.buyerEmail);
+      assert.ok(mail.html.includes("Growth Guide") && mail.html.includes("Caption Templates"));
+      // Idempotent: a retry adds no entitlements.
+      await handleStripeEvent(event("checkout.session.completed", { ...sessions.get(r.session.providerRef)!, payment_status: "paid" }));
+      assert.equal((await ents(bumpOrder)).length, 2);
+    });
+
+    await test("refund revokes both entitlements on a bumped order", async () => {
+      const res = await handleStripeEvent(
+        event("charge.refunded", { id: "ch_b", amount: 2620, amount_refunded: 2620, refunded: true, metadata: { orderId: bumpOrder }, payment_intent: null }),
+      );
+      assert.equal(res.action, "refunded");
+      assert.equal((await order(bumpOrder))?.status, "refunded");
+      const e = await ents(bumpOrder);
+      assert.equal(e.length, 2);
+      assert.ok(e.every((x) => x.revoked));
     });
 
     console.log(`\n${passed} tests passed`);

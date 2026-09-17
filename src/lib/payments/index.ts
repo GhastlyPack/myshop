@@ -12,11 +12,16 @@ import { paypalConfigured, stripeConfigured } from "@/lib/env";
  */
 export type Provider = "stripe" | "paypal";
 
+export type CheckoutBump = { productId: string; title: string; amountCents: number };
+
 export type CheckoutInput = {
   orderId: string;
   storeId: string;
   productId: string;
+  /** Main product price after any discount code. The bump (if any) is added on top. */
   amountCents: number;
+  /** Optional order bump; becomes a second Stripe line item. */
+  bump?: CheckoutBump | null;
   currency: string;
   buyerEmail: string;
   buyerName: string;

@@ -1,11 +1,11 @@
 import "server-only";
 import type Stripe from "stripe";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { asc } from "drizzle-orm";
 import { entitlements, orders, paymentAccounts, productFiles, productLinks, products, stores } from "@/db/schema";
+import { recordSale } from "@/lib/commerce";
 import { env } from "@/lib/env";
-import { sendDeliveryEmail } from "@/lib/free-checkout";
+import { sendDeliveryEmailProducts, type DeliveryItem } from "@/lib/free-checkout";
 import { capiPurchase } from "@/lib/meta";
 import { newId, newToken } from "@/lib/ids";
 import { track } from "@/lib/track";
@@ -90,29 +90,48 @@ export async function handleCheckoutPaid(session: Stripe.Checkout.Session, accou
     .returning();
   if (!updated) return { handled: true, action: "already_paid", orderId: order.id };
 
-  let ent = await db.query.entitlements.findFirst({ where: eq(entitlements.orderId, order.id) });
-  if (!ent) {
-    [ent] = await db
-      .insert(entitlements)
-      .values({ id: newId("ent"), orderId: order.id, productId: order.productId, buyerEmail: order.buyerEmail, token: newToken() })
-      .returning();
-  } else if (ent.revoked) {
-    // Re-paid after a refund (rare); make sure the buyer can download again.
-    await db.update(entitlements).set({ revoked: false }).where(eq(entitlements.id, ent.id));
+  // One entitlement per product on the order: the main product plus the order bump, if any.
+  const productIds = [order.productId, ...(order.bumpProductId && order.bumpProductId !== order.productId ? [order.bumpProductId] : [])];
+  const existing = await db.select().from(entitlements).where(eq(entitlements.orderId, order.id));
+  const tokens = new Map<string, string>();
+  for (const productId of productIds) {
+    let ent = existing.find((e) => e.productId === productId);
+    if (!ent) {
+      [ent] = await db
+        .insert(entitlements)
+        .values({ id: newId("ent"), orderId: order.id, productId, buyerEmail: order.buyerEmail, token: newToken() })
+        .returning();
+    } else if (ent.revoked) {
+      // Re-paid after a refund (rare); make sure the buyer can download again.
+      await db.update(entitlements).set({ revoked: false }).where(eq(entitlements.id, ent.id));
+    }
+    tokens.set(productId, ent.token);
   }
 
-  const [store, product] = await Promise.all([
+  const [store, rows] = await Promise.all([
     db.query.stores.findFirst({ where: eq(stores.id, order.storeId) }),
-    db.query.products.findFirst({ where: eq(products.id, order.productId) }),
+    db.select().from(products).where(inArray(products.id, productIds)),
   ]);
+  const product = rows.find((p) => p.id === order.productId);
+
+  // Sold counters + discount uses. Quantity is not reserved ahead of payment, so a race past
+  // the last unit still lands here as paid; the storefront just shows sold out from now on.
+  await recordSale(order, store?.username);
 
   if (store && product) {
-    const [files, links] = await Promise.all([
-      db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),
-      db.select().from(productLinks).where(eq(productLinks.productId, product.id)).orderBy(asc(productLinks.position)),
-    ]);
+    const items: DeliveryItem[] = [];
+    for (const productId of productIds) {
+      const p = rows.find((r) => r.id === productId);
+      const token = tokens.get(productId);
+      if (!p || !token) continue;
+      const [files, links] = await Promise.all([
+        db.select().from(productFiles).where(eq(productFiles.productId, p.id)).orderBy(asc(productFiles.position)),
+        db.select().from(productLinks).where(eq(productLinks.productId, p.id)).orderBy(asc(productLinks.position)),
+      ]);
+      items.push({ product: p, files, links, token });
+    }
     // Same template as the free flow. Never throws, so a mail hiccup can't trigger Stripe retries.
-    await sendDeliveryEmail({ store, product, files, links, buyerName: order.buyerName, buyerEmail: order.buyerEmail, token: ent.token, isPaid: true });
+    await sendDeliveryEmailProducts({ store, items, buyerName: order.buyerName, buyerEmail: order.buyerEmail, isPaid: true });
     // Server-side Meta Purchase; the thanks page fires the browser Purchase with the same order id.
     void capiPurchase(
       { eventId: order.id, eventSourceUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}`, email: order.buyerEmail },
@@ -160,7 +179,7 @@ export async function handleChargeRefunded(charge: Stripe.Charge, account: strin
   return { handled: true, action: order.status === "refunded" ? "already_refunded" : "refunded", orderId: order.id };
 }
 
-/** Shared by the webhook and the dashboard's optimistic refund path. */
+/** Shared by the webhook and the dashboard's optimistic refund path. Revokes every entitlement on the order (main product + bump). */
 export async function markOrderRefunded(orderId: string) {
   await db.update(orders).set({ status: "refunded" }).where(eq(orders.id, orderId));
   await db.update(entitlements).set({ revoked: true }).where(eq(entitlements.orderId, orderId));

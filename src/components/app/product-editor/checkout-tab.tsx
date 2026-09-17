@@ -2,7 +2,9 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import type { CustomField } from "@/db/schema";
-import type { TabProps } from "@/components/app/product-editor/editor";
+import type { DiscountCodeRow } from "@/app/app/products/[id]/actions";
+import { DiscountCodes } from "@/components/app/product-editor/discount-codes";
+import type { BumpCandidate, TabProps } from "@/components/app/product-editor/editor";
 import { Field, FieldError, FieldHint } from "@/components/app/product-editor/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { formatPrice } from "@/lib/format";
+
+const NO_BUMP = "__none__";
+/** Stripe's minimum charge; mirrors MIN_CHARGE_CENTS in src/lib/commerce.ts (server-only). */
+const MIN_CHARGE_CENTS = 50;
+
+function bumpPriceCents(priceCents: number, percentOff: number) {
+  const pct = Math.min(100, Math.max(0, Math.round(percentOff || 0)));
+  return Math.max(0, priceCents - Math.round((priceCents * pct) / 100));
+}
 
 const FIELD_TYPES: { value: CustomField["type"]; label: string }[] = [
   { value: "text", label: "Short text" },
@@ -21,8 +33,23 @@ const FIELD_TYPES: { value: CustomField["type"]; label: string }[] = [
 
 const needsOptions = (t: CustomField["type"]) => t === "select" || t === "multiselect";
 
-export function CheckoutTab({ form, update, errors }: TabProps) {
+export function CheckoutTab({
+  form,
+  update,
+  errors,
+  productId,
+  currency,
+  quantitySold,
+  bumpCandidates,
+  discountCodes,
+}: TabProps & { productId: string; currency: string; quantitySold: number; bumpCandidates: BumpCandidate[]; discountCodes: DiscountCodeRow[] }) {
   const fields = form.fields;
+  const limited = form.quantityLimit != null;
+  const remaining = form.quantityLimit != null ? Math.max(0, form.quantityLimit - quantitySold) : null;
+  const canBump = form.priceCents >= MIN_CHARGE_CENTS;
+  const bump = bumpCandidates.find((b) => b.id === form.bumpProductId) ?? null;
+  const bumpPrice = bump ? bumpPriceCents(bump.priceCents, form.bumpDiscountPercent) : 0;
+  const bumpPlaceholder = bump ? `Add ${bump.title} for ${formatPrice(bumpPrice, currency)}` : "Add {title} for {price}";
   function setField(i: number, patch: Partial<CustomField>) {
     update({ fields: fields.map((f, idx) => (idx === i ? { ...f, ...patch } : f)) });
   }
@@ -100,6 +127,92 @@ export function CheckoutTab({ form, update, errors }: TabProps) {
           <Switch id="marketing" checked={form.marketingOptIn} onCheckedChange={(v) => update({ marketingOptIn: v })} />
         </div>
       </section>
+
+      <section className="space-y-3 rounded-xl border bg-background p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <Label htmlFor="limitQty">Limit quantity</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {limited ? `${quantitySold} of ${form.quantityLimit} sold${remaining === 0 ? ". Sold out." : remaining != null && remaining <= 10 ? `. Only ${remaining} left.` : "."}` : "Stop selling after a set number of orders. Handy for cohorts, seats or launch bundles."}
+            </p>
+          </div>
+          <Switch id="limitQty" checked={limited} onCheckedChange={(v) => update({ quantityLimit: v ? Math.max(1, quantitySold, form.quantityLimit ?? 10) : null })} />
+        </div>
+        {limited && (
+          <Field label="Total available" htmlFor="quantityLimit" error={errors.quantityLimit} className="max-w-[12rem]">
+            <Input
+              id="quantityLimit"
+              inputMode="numeric"
+              value={form.quantityLimit ?? ""}
+              onChange={(e) => {
+                const n = parseInt(e.target.value.replace(/\D/g, ""), 10);
+                update({ quantityLimit: Number.isFinite(n) && n > 0 ? n : 1 });
+              }}
+              aria-invalid={Boolean(errors.quantityLimit)}
+            />
+            <FieldHint>Counts paid orders, including when this product is bought as an add-on.</FieldHint>
+          </Field>
+        )}
+      </section>
+
+      <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
+        <div>
+          <h2 className="text-sm font-semibold">Order bump</h2>
+          <p className="text-xs text-muted-foreground">Offer one more paid product as a one-tap add-on right above the pay button.</p>
+        </div>
+        {!canBump ? (
+          <FieldHint>Order bumps need a price of at least {formatPrice(MIN_CHARGE_CENTS, currency)} on this product, so cards can be charged for the combined total.</FieldHint>
+        ) : bumpCandidates.length === 0 ? (
+          <FieldHint>Publish another paid download in your store to offer it here.</FieldHint>
+        ) : (
+          <>
+            <Field label="Product" error={errors.bumpProductId}>
+              <Select
+                value={form.bumpProductId ?? NO_BUMP}
+                onValueChange={(v) => update({ bumpProductId: v === NO_BUMP ? null : v, ...(v === NO_BUMP ? { bumpHeadline: "", bumpDiscountPercent: 0 } : {}) })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_BUMP}>No order bump</SelectItem>
+                  {bumpCandidates.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.title} · {formatPrice(b.priceCents, currency)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            {bump && (
+              <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
+                <Field label="Headline" htmlFor="bumpHeadline" error={errors.bumpHeadline}>
+                  <Input id="bumpHeadline" value={form.bumpHeadline} onChange={(e) => update({ bumpHeadline: e.target.value })} maxLength={120} placeholder={bumpPlaceholder} />
+                  <FieldHint>Leave blank to use the default.</FieldHint>
+                </Field>
+                <Field label="Percent off" htmlFor="bumpDiscountPercent" error={errors.bumpDiscountPercent}>
+                  <Input
+                    id="bumpDiscountPercent"
+                    inputMode="numeric"
+                    value={form.bumpDiscountPercent || ""}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value.replace(/\D/g, ""), 10);
+                      update({ bumpDiscountPercent: Number.isFinite(n) ? Math.min(100, n) : 0 });
+                    }}
+                    placeholder="0"
+                  />
+                  <FieldHint>
+                    Buyers pay {formatPrice(bumpPrice, currency)}
+                    {form.bumpDiscountPercent > 0 ? ` instead of ${formatPrice(bump.priceCents, currency)}` : ""}.
+                  </FieldHint>
+                </Field>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <DiscountCodes productId={productId} currency={currency} priceCents={form.priceCents} initial={discountCodes} />
 
       <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
         <div>

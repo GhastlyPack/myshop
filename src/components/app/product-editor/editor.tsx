@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { saveProduct, type FileRow } from "@/app/app/products/[id]/actions";
+import { saveProduct, type DiscountCodeRow, type FileRow } from "@/app/app/products/[id]/actions";
 import { CheckoutTab } from "@/components/app/product-editor/checkout-tab";
 import { ContentTab } from "@/components/app/product-editor/content-tab";
 import { DetailsTab } from "@/components/app/product-editor/details-tab";
@@ -17,6 +17,7 @@ import type { ProductInput } from "@/lib/product-input";
 
 export type EditorProduct = Omit<ProductInput, "links"> & { id: string; status: "draft" | "published" };
 export type EditorSection = { id: string; title: string };
+export type BumpCandidate = { id: string; title: string; priceCents: number };
 export type Errors = Record<string, string>;
 
 export type TabProps = {
@@ -31,6 +32,10 @@ const TAB_FOR_ERROR: Record<string, string> = {
   fields: "checkout",
   confirmationSubject: "checkout",
   confirmationBody: "checkout",
+  quantityLimit: "checkout",
+  bumpProductId: "checkout",
+  bumpHeadline: "checkout",
+  bumpDiscountPercent: "checkout",
   dmKeyword: "options",
   listed: "options",
 };
@@ -44,6 +49,9 @@ export function ProductEditor({
   sections,
   store,
   baseUrl,
+  quantitySold,
+  bumpCandidates,
+  discountCodes,
 }: {
   product: EditorProduct;
   thumbnailUrl: string | null;
@@ -53,6 +61,9 @@ export function ProductEditor({
   sections: EditorSection[];
   store: { username: string; currency: string };
   baseUrl: string;
+  quantitySold: number;
+  bumpCandidates: BumpCandidate[];
+  discountCodes: DiscountCodeRow[];
 }) {
   const router = useRouter();
   const { id, status: initialStatus, ...rest } = product;
@@ -166,7 +177,16 @@ export function ProductEditor({
           <ContentTab form={form} update={update} errors={errors} productId={id} files={files} setFiles={setFiles} />
         </TabsContent>
         <TabsContent value="checkout" className="pt-4">
-          <CheckoutTab form={form} update={update} errors={errors} />
+          <CheckoutTab
+            form={form}
+            update={update}
+            errors={errors}
+            productId={id}
+            currency={store.currency}
+            quantitySold={quantitySold}
+            bumpCandidates={bumpCandidates}
+            discountCodes={discountCodes}
+          />
         </TabsContent>
         <TabsContent value="options" className="pt-4">
           <OptionsTab form={form} update={update} errors={errors} productId={id} username={store.username} slug={savedSlug} />

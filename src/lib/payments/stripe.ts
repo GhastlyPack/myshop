@@ -99,26 +99,28 @@ export function platformFeeCents(amountCents: number, platformFeeBps: number) {
   return Math.round((amountCents * platformFeeBps) / 10000);
 }
 
+/** What the buyer is charged: discounted main price + bump. */
+export function checkoutTotalCents(input: Pick<CheckoutInput, "amountCents" | "bump">) {
+  return input.amountCents + (input.bump?.amountCents ?? 0);
+}
+
 /**
  * Hosted Checkout Session on the creator's account. The order id rides along as
  * `client_reference_id` + metadata, and the same metadata is copied onto the
  * PaymentIntent (and therefore the Charge) so `charge.refunded` can find the order.
  */
 export async function createCheckoutSession(input: CheckoutInput, accountId: string): Promise<Stripe.Checkout.Session> {
-  const fee = platformFeeCents(input.amountCents, input.platformFeeBps);
+  const fee = platformFeeCents(checkoutTotalCents(input), input.platformFeeBps);
   const metadata = { orderId: input.orderId, storeId: input.storeId, productId: input.productId, platformFeeCents: String(fee) };
+  const currency = input.currency.toLowerCase();
+  const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+    { price_data: { currency, unit_amount: input.amountCents, product_data: { name: input.title } }, quantity: 1 },
+  ];
+  // Order bump rides along as its own line so the receipt itemises it.
+  if (input.bump) line_items.push({ price_data: { currency, unit_amount: input.bump.amountCents, product_data: { name: input.bump.title } }, quantity: 1 });
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: input.currency.toLowerCase(),
-          unit_amount: input.amountCents,
-          product_data: { name: input.title },
-        },
-        quantity: 1,
-      },
-    ],
+    line_items,
     customer_email: input.buyerEmail,
     client_reference_id: input.orderId,
     metadata,

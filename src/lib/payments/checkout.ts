@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { orders, paymentAccounts } from "@/db/schema";
 import { stripeConfigured } from "@/lib/env";
 import type { CheckoutInput, CheckoutSession } from "./index";
-import { createCheckoutSession, platformFeeCents } from "./stripe";
+import { checkoutTotalCents, createCheckoutSession, platformFeeCents } from "./stripe";
 
 /**
  * Paid checkout entry point used by the product page (Package B).
@@ -42,7 +42,11 @@ export async function startPaidCheckout(input: CheckoutInput): Promise<StartChec
   };
 
   if (!stripeConfigured) return fail(NOT_READY);
-  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) return fail("This product can't be bought right now.");
+  const total = checkoutTotalCents(input);
+  if (!Number.isInteger(input.amountCents) || input.amountCents < 0 || !Number.isInteger(total) || total <= 0) {
+    return fail("This product can't be bought right now.");
+  }
+  if (input.bump && (!Number.isInteger(input.bump.amountCents) || input.bump.amountCents < 0)) return fail("This add-on can't be bought right now.");
 
   const acct = await getStripeAccount(input.storeId);
   if (!acct?.chargesEnabled) return fail(NOT_READY);
@@ -55,8 +59,10 @@ export async function startPaidCheckout(input: CheckoutInput): Promise<StartChec
       .set({
         provider: "stripe",
         providerRef: session.id,
-        platformFeeCents: platformFeeCents(input.amountCents, input.platformFeeBps),
-        amountCents: input.amountCents,
+        platformFeeCents: platformFeeCents(total, input.platformFeeBps),
+        amountCents: total,
+        bumpProductId: input.bump?.productId ?? null,
+        bumpCents: input.bump?.amountCents ?? 0,
         currency: input.currency.toLowerCase(),
       })
       .where(eq(orders.id, input.orderId));

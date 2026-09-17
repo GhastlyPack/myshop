@@ -5,10 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { productFiles, productLinks, products, sections, type CustomField } from "@/db/schema";
+import { discountCodes, productFiles, productLinks, products, sections, type CustomField, type DiscountCode } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
+import { canOfferBump } from "@/lib/commerce";
 import { newId } from "@/lib/ids";
-import { productInputSchema, toSlug, type ProductInput } from "@/lib/product-input";
+import { discountCodeInputSchema, productInputSchema, toSlug, type DiscountCodeInput, type ProductInput } from "@/lib/product-input";
 import { revalidateStore } from "@/lib/queries";
 import { deleteObject } from "@/lib/storage";
 
@@ -57,6 +58,21 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
     const sec = await db.query.sections.findFirst({ where: and(eq(sections.id, d.sectionId), eq(sections.storeId, store.id)), columns: { id: true } });
     if (!sec) errors.sectionId = "Pick a section from your store.";
     else sectionId = sec.id;
+  }
+
+  // Order bump: another paid, published, live product from this store; only on a card-payable product.
+  let bumpProductId: string | null = null;
+  if (d.bumpProductId) {
+    if (!canOfferBump(d)) errors.bumpProductId = "Order bumps need a price of at least $0.50 on this product.";
+    else if (d.bumpProductId === product.id) errors.bumpProductId = "A product can't bump itself.";
+    else {
+      const bump = await db.query.products.findFirst({
+        where: and(eq(products.id, d.bumpProductId), eq(products.storeId, store.id), eq(products.status, "published"), isNull(products.deletedAt)),
+        columns: { id: true, priceCents: true, type: true },
+      });
+      if (!bump || bump.priceCents <= 0 || bump.type === "link") errors.bumpProductId = "Pick a paid, published download from your store.";
+      else bumpProductId = bump.id;
+    }
   }
 
   // Select-type fields need options.
@@ -113,6 +129,10 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
         confirmationBody: d.confirmationBody || null,
         listed: d.listed,
         dmKeyword: d.dmKeyword || null,
+        quantityLimit: d.quantityLimit,
+        bumpProductId,
+        bumpHeadline: bumpProductId ? d.bumpHeadline || null : null,
+        bumpDiscountPercent: bumpProductId ? d.bumpDiscountPercent : 0,
         status,
       })
       .where(eq(products.id, product.id));
@@ -205,4 +225,72 @@ export async function deleteProduct(id: string): Promise<never | { ok: false; er
   revalidateStore(store.username);
   revalidatePath("/app");
   redirect("/app");
+}
+
+// ---------- discount codes ----------
+
+export type DiscountCodeRow = Pick<DiscountCode, "id" | "code" | "percentOff" | "amountOffCents" | "maxUses" | "uses" | "expiresAt" | "active" | "createdAt">;
+
+const toRow = (r: DiscountCode): DiscountCodeRow => ({
+  id: r.id,
+  code: r.code,
+  percentOff: r.percentOff,
+  amountOffCents: r.amountOffCents,
+  maxUses: r.maxUses,
+  uses: r.uses,
+  expiresAt: r.expiresAt,
+  active: r.active,
+  createdAt: r.createdAt,
+});
+
+export async function addDiscountCode(productId: string, input: DiscountCodeInput): Promise<{ ok: true; code: DiscountCodeRow } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const product = await ownProduct(productId, store.id);
+  if (!product) return { ok: false, error: "Product not found." };
+  const parsed = discountCodeInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the code." };
+  const d = parsed.data;
+  if (d.kind === "percent" && d.value > 100) return { ok: false, error: "Percent off can't exceed 100." };
+  if (d.kind === "amount" && product.priceCents > 0 && d.value > product.priceCents) return { ok: false, error: "Amount off can't exceed the price." };
+  // End of the chosen day (UTC) so the code works through that date.
+  const expiresAt = d.expiresAt ? new Date(`${d.expiresAt}T23:59:59.999Z`) : null;
+  if (expiresAt && Number.isNaN(expiresAt.getTime())) return { ok: false, error: "Pick a valid date." };
+  const clash = await db.query.discountCodes.findFirst({ where: and(eq(discountCodes.productId, product.id), eq(discountCodes.code, d.code)), columns: { id: true } });
+  if (clash) return { ok: false, error: "That code already exists on this product." };
+  const [row] = await db
+    .insert(discountCodes)
+    .values({
+      id: newId("dsc"),
+      productId: product.id,
+      code: d.code,
+      percentOff: d.kind === "percent" ? d.value : null,
+      amountOffCents: d.kind === "amount" ? d.value : null,
+      maxUses: d.maxUses,
+      expiresAt,
+    })
+    .returning();
+  return { ok: true, code: toRow(row) };
+}
+
+export async function setDiscountCodeActive(productId: string, codeId: string, active: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const product = await ownProduct(productId, store.id);
+  if (!product) return { ok: false, error: "Product not found." };
+  const rows = await db
+    .update(discountCodes)
+    .set({ active })
+    .where(and(eq(discountCodes.id, String(codeId)), eq(discountCodes.productId, product.id)))
+    .returning({ id: discountCodes.id });
+  return rows.length ? { ok: true } : { ok: false, error: "Code not found." };
+}
+
+export async function deleteDiscountCode(productId: string, codeId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const product = await ownProduct(productId, store.id);
+  if (!product) return { ok: false, error: "Product not found." };
+  const rows = await db
+    .delete(discountCodes)
+    .where(and(eq(discountCodes.id, String(codeId)), eq(discountCodes.productId, product.id)))
+    .returning({ id: discountCodes.id });
+  return rows.length ? { ok: true } : { ok: false, error: "Code not found." };
 }

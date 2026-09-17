@@ -233,6 +233,101 @@
   color: var(--sf-accent);
 }
 
+/* ---------- stock ---------- */
+.sf-stock {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: color-mix(in srgb, #dc2626 12%, var(--sf-surface));
+  color: #b91c1c;
+}
+.sf-stock[data-out="true"] {
+  background: color-mix(in srgb, var(--sf-text) 8%, transparent);
+  color: var(--sf-muted);
+}
+.sf-soldout .sf-btn {
+  background: color-mix(in srgb, var(--sf-text) 8%, transparent);
+  color: var(--sf-muted);
+  filter: none;
+}
+.sf-soldout .sf-thumb img {
+  filter: grayscale(0.6);
+  opacity: 0.8;
+}
+
+/* ---------- order bump ---------- */
+.sf-bump {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  border-radius: min(var(--sf-card-radius), 16px);
+  border: 1.5px dashed color-mix(in srgb, var(--sf-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--sf-accent) 6%, var(--sf-surface));
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.sf-bump:has(input:checked) {
+  border-style: solid;
+  border-color: var(--sf-accent);
+  background: color-mix(in srgb, var(--sf-accent) 10%, var(--sf-surface));
+}
+.sf-bump .sf-check {
+  margin-top: 2px;
+}
+.sf-bump-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.sf-strike {
+  text-decoration: line-through;
+  color: var(--sf-muted);
+  font-weight: 400;
+}
+
+/* ---------- discount code ---------- */
+.sf-code-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.sf-code-row .sf-input {
+  text-transform: uppercase;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.06em;
+}
+.sf-code-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--sf-accent) 10%, var(--sf-surface));
+}
+.sf-linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--sf-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sf-linkbtn:hover {
+  color: var(--sf-text);
+}
+
 /* ---------- forms ---------- */
 .sf-label {
   display: block;

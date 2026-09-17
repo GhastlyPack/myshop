@@ -22,6 +22,10 @@ export async function GET(req: Request) {
         (o.amountCents / 100).toFixed(2),
         o.currency.toUpperCase(),
         (o.platformFeeCents / 100).toFixed(2),
+        o.discountCode ?? "",
+        (o.discountCents / 100).toFixed(2),
+        o.bumpProductTitle ?? "",
+        (o.bumpCents / 100).toFixed(2),
         o.provider,
         o.providerRef ?? "",
         o.status,
@@ -33,7 +37,25 @@ export async function GET(req: Request) {
   const stamp = new Date().toISOString().slice(0, 10);
   return csvResponse(
     `${store.username}-orders-${stamp}.csv`,
-    ["order_id", "date", "product", "product_slug", "buyer_name", "buyer_email", "amount", "currency", "platform_fee", "provider", "provider_ref", "status", "marketing_opt_in"],
+    [
+      "order_id",
+      "date",
+      "product",
+      "product_slug",
+      "buyer_name",
+      "buyer_email",
+      "amount",
+      "currency",
+      "platform_fee",
+      "discount_code",
+      "discount",
+      "bump_product",
+      "bump_amount",
+      "provider",
+      "provider_ref",
+      "status",
+      "marketing_opt_in",
+    ],
     cells(),
   );
 }

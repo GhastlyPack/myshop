@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Markdown from "react-markdown";
 import { ArrowUpRight } from "lucide-react";
-import { CheckoutForm } from "@/components/storefront/checkout-form";
+import { CheckoutForm, type BumpOffer } from "@/components/storefront/checkout-form";
 import { StoreFooter } from "@/components/storefront/footer";
 import { resolveStoreTheme } from "@/components/storefront/preview-theme";
 import { formatPrice } from "@/components/storefront/price";
@@ -11,6 +11,7 @@ import { CompactStoreHeader } from "@/components/storefront/store-header";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { TrackView } from "@/components/storefront/track-view";
 import { PixelEvent } from "@/components/storefront/pixel-event";
+import { bumpPrice, defaultBumpHeadline, isSoldOut, LOW_STOCK_AT, remainingUnits } from "@/lib/commerce";
 import { getPublicProduct } from "@/lib/queries";
 import { publicUrl } from "@/lib/storage";
 
@@ -35,8 +36,21 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const [{ username, slug }, sp] = await Promise.all([params, searchParams]);
   const data = await getPublicProduct(username, slug);
   if (!data) notFound();
-  const { store, product, files, links, reviews } = data;
+  const { store, product, files, links, reviews, bump } = data;
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);
+  const remaining = remainingUnits(product);
+  const soldOut = isSoldOut(product);
+  const bumpOffer: BumpOffer | null =
+    bump && product.priceCents > 0 && !isSoldOut(bump)
+      ? {
+          productId: bump.id,
+          title: bump.title,
+          headline: product.bumpHeadline?.trim() || defaultBumpHeadline(bump.title, formatPrice(bumpPrice(bump, product.bumpDiscountPercent), bump.currency)),
+          thumbUrl: publicUrl(bump.thumbnailKey),
+          priceCents: bump.priceCents,
+          bumpCents: bumpPrice(bump, product.bumpDiscountPercent),
+        }
+      : null;
   const landing = sp.lp === "1";
   const banner = publicUrl(product.bannerKey);
   const thumb = publicUrl(product.thumbnailKey);
@@ -71,6 +85,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
           <header className="mt-6 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="sf-chip">{isLink ? "Link" : formatPrice(product.priceCents, product.currency)}</span>
+              {!isLink && soldOut && (
+                <span className="sf-stock" data-out="true">
+                  Sold out
+                </span>
+              )}
+              {!isLink && !soldOut && remaining != null && remaining <= LOW_STOCK_AT && <span className="sf-stock">Only {remaining} left</span>}
               {reviews.length > 0 && (
                 <span className="sf-muted inline-flex items-center gap-1.5 text-sm">
                   <Stars value={avg} size={14} />
@@ -106,6 +126,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 </a>
               ))}
             </div>
+          ) : soldOut ? (
+            <div className="text-center">
+              <h2 className="sf-heading text-[1.2rem]">Sold out</h2>
+              <p className="sf-muted mt-2 text-[0.95rem]">
+                All {product.quantityLimit} {product.quantityLimit === 1 ? "copy" : "copies"} of {product.title} are gone. Follow {store.displayName} for the next drop.
+              </p>
+            </div>
           ) : (
             <>
               <h2 className="sf-heading mb-4 text-[1.2rem]">{product.priceCents === 0 ? "Where should we send it?" : "Get instant access"}</h2>
@@ -120,6 +147,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 buttonText={product.buttonText}
                 fields={product.fields}
                 marketingOptIn={product.marketingOptIn}
+                bump={bumpOffer}
               />
             </>
           )}
