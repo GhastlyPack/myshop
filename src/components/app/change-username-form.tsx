@@ -11,37 +11,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { normalizeUsername, usernameError } from "@/lib/reserved";
 
+type Remote = { for: string; ok: boolean; message: string };
+
 export function ChangeUsernameForm({ current, host }: { current: string; host: string }) {
   const router = useRouter();
   const [value, setValue] = useState(current);
-  const [status, setStatus] = useState<{ state: "idle" | "checking" | "ok" | "bad"; message?: string }>({ state: "idle" });
+  const [remote, setRemote] = useState<Remote | null>(null);
   const [pending, start] = useTransition();
   const normalized = normalizeUsername(value);
   const unchanged = normalized === current;
+  const localError = unchanged ? null : usernameError(normalized);
 
+  // Debounced server availability check; state is only set from the async callback.
   useEffect(() => {
-    if (unchanged) {
-      setStatus({ state: "idle" });
-      return;
-    }
-    const local = usernameError(normalized);
-    if (local) {
-      setStatus({ state: "bad", message: local });
-      return;
-    }
-    setStatus({ state: "checking" });
+    if (unchanged || localError) return;
     const t = setTimeout(async () => {
       const r = await checkUsername(normalized);
-      setStatus(r.available ? { state: "ok", message: `${host}/${r.username} is available.` } : { state: "bad", message: r.error ?? "Not available." });
+      setRemote({ for: normalized, ok: r.available, message: r.available ? `${host}/${r.username} is available.` : (r.error ?? "Not available.") });
     }, 350);
     return () => clearTimeout(t);
-  }, [normalized, unchanged, host]);
+  }, [normalized, unchanged, localError, host]);
+
+  const state: "idle" | "checking" | "ok" | "bad" = unchanged ? "idle" : localError ? "bad" : remote?.for === normalized ? (remote.ok ? "ok" : "bad") : "checking";
+  const message = unchanged ? null : localError ?? (remote?.for === normalized ? remote.message : null);
 
   function save() {
     start(async () => {
       const r = await changeUsername(normalized);
       if (!r.ok) {
-        setStatus({ state: "bad", message: r.error });
+        setRemote({ for: normalized, ok: false, message: r.error });
         return;
       }
       toast.success(`Your link is now ${host}/${r.username}`);
@@ -58,24 +56,16 @@ export function ChangeUsernameForm({ current, host }: { current: string; host: s
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 flex-1 items-center rounded-md border bg-background pl-3 focus-within:ring-2 focus-within:ring-ring">
           <span className="shrink-0 text-sm text-muted-foreground">{host}/</span>
-          <Input
-            id="username"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            className="border-0 shadow-none focus-visible:ring-0"
-          />
-          {status.state === "ok" && <Check className="mr-2 size-4 text-green-600" />}
-          {status.state === "bad" && <X className="mr-2 size-4 text-destructive" />}
+          <Input id="username" value={value} onChange={(e) => setValue(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className="border-0 shadow-none focus-visible:ring-0" />
+          {state === "ok" && <Check className="mr-2 size-4 text-green-600" />}
+          {state === "bad" && <X className="mr-2 size-4 text-destructive" />}
         </div>
-        <Button onClick={save} disabled={unchanged || status.state !== "ok" || pending}>
+        <Button onClick={save} disabled={unchanged || state !== "ok" || pending}>
           {pending ? "Saving…" : "Change link"}
         </Button>
       </div>
-      {status.message && <p className={`text-xs ${status.state === "bad" ? "text-destructive" : "text-muted-foreground"}`}>{status.message}</p>}
-      {status.state === "checking" && <p className="text-xs text-muted-foreground">Checking…</p>}
+      {message && <p className={`text-xs ${state === "bad" ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>}
+      {state === "checking" && <p className="text-xs text-muted-foreground">Checking…</p>}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { BarChart3, ExternalLink, LayoutGrid, LogOut, Menu, MessageSquareText, Palette, Settings, ShieldCheck, Users, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Wordmark } from "@/components/brand/wordmark";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -88,8 +89,8 @@ export function AppNav({ user, store, logoutHref }: NavProps) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r bg-background sm:flex">
       <div className="px-5 py-5">
-        <Link href="/app" className="text-sm font-semibold tracking-tight">
-          visitmy.shop
+        <Link href="/app" className="inline-flex" aria-label="visitmy.shop">
+          <Wordmark size={18} />
         </Link>
         <StoreLink store={store} />
       </div>
@@ -105,8 +106,8 @@ export function MobileNav({ user, store, logoutHref }: NavProps) {
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur sm:hidden">
       <div className="min-w-0">
-        <Link href="/app" className="text-sm font-semibold tracking-tight">
-          visitmy.shop
+        <Link href="/app" className="inline-flex" aria-label="visitmy.shop">
+          <Wordmark size={18} />
         </Link>
         <StoreLink store={store} />
       </div>
@@ -117,7 +118,9 @@ export function MobileNav({ user, store, logoutHref }: NavProps) {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex w-72 flex-col p-0">
-          <SheetTitle className="px-5 pt-5 text-sm font-semibold tracking-tight">visitmy.shop</SheetTitle>
+          <SheetTitle className="px-5 pt-5">
+            <Wordmark size={18} />
+          </SheetTitle>
           <div className="px-5 pb-3">
             <StoreLink store={store} />
           </div>

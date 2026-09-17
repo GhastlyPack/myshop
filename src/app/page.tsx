@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, loginPath } from "@/lib/auth";
 
@@ -7,7 +8,9 @@ export default async function Home() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-3xl flex-col items-center justify-center gap-8 px-6 text-center">
       <div className="space-y-4">
-        <p className="text-sm font-medium tracking-widest text-muted-foreground uppercase">visitmy.shop</p>
+        <div className="flex justify-center">
+          <Wordmark size={28} />
+        </div>
         <h1 className="text-5xl font-semibold tracking-tight sm:text-6xl">Your bio link, but it actually sells.</h1>
         <p className="mx-auto max-w-xl text-lg text-muted-foreground">
           Upload a guide, a template, a preset pack. Drop one link in your Instagram bio. Get paid straight to your own

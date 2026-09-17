@@ -21,14 +21,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getPublicProduct(username, slug);
   if (!data) return { title: "Not found" };
   const { store, product } = data;
-  const img = publicUrl(product.bannerKey) ?? publicUrl(product.thumbnailKey) ?? publicUrl(store.avatarKey);
   const title = `${product.title} · ${store.displayName}`;
   const description = product.subtitle ?? product.description?.slice(0, 160) ?? undefined;
   return {
     title: { absolute: title },
     description,
-    openGraph: { title, description, images: img ? [img] : undefined },
-    twitter: { card: img ? "summary_large_image" : "summary", title, description, images: img ? [img] : undefined },
+    openGraph: { title, description },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

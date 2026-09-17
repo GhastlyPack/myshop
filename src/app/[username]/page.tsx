@@ -21,12 +21,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getPublicStoreTagged(username);
   if (!data) return { title: "Not found" };
   const { store } = data;
-  const avatar = publicUrl(store.avatarKey);
   return {
     title: { absolute: `${store.displayName} (@${store.username})` },
     description: store.bio ?? `${store.displayName} on visitmy.shop`,
-    openGraph: { title: `${store.displayName} (@${store.username})`, description: store.bio ?? undefined, images: avatar ? [avatar] : undefined, type: "profile" },
-    twitter: { card: "summary", title: `${store.displayName} (@${store.username})`, description: store.bio ?? undefined, images: avatar ? [avatar] : undefined },
+    openGraph: { title: `${store.displayName} (@${store.username})`, description: store.bio ?? undefined, type: "profile" },
+    twitter: { card: "summary_large_image", title: `${store.displayName} (@${store.username})`, description: store.bio ?? undefined },
   };
 }
 
