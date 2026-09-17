@@ -11,9 +11,12 @@ declare global {
 const client =
   globalThis.__myshopSql ??
   postgres(env.DATABASE_URL, {
-    max: env.NODE_ENV === "production" ? 5 : 10,
+    // Serverless: one connection per function instance; the Supabase pooler multiplexes.
+    max: env.NODE_ENV === "production" ? 1 : 10,
     prepare: false, // required for Supabase transaction pooler (port 6543)
-    idle_timeout: 20,
+    idle_timeout: env.NODE_ENV === "production" ? 5 : 20,
+    max_lifetime: 60 * 5,
+    connect_timeout: 10, // seconds; surface a dead pooler as an error instead of a hang
   });
 if (env.NODE_ENV !== "production") globalThis.__myshopSql = client;
 

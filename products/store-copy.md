@@ -50,7 +50,7 @@ Software now does six of the seven jobs in an ad department. The seventh seat, t
 ## Replace a $1M Marketing Team with One AI Tool (Manual 1)
 
 - **Slug:** `manual-1`
-- **Price:** $39.0
+- **Price:** $39
 - **Card style:** preview
 - **Button text:** Get Manual 1
 
@@ -99,7 +99,7 @@ The whole seat as a skill. Install it in Claude and it will:
 
 Works in Claude.ai, Claude Code, and Cowork.
 
-**3. The toolkit PDF** (13 pages)
+**3. The toolkit PDF** (14 pages)
 
 Install guide, fill-in worksheets and templates for every step (kickoff, expectations letter, offer brief, copy checklist, setup and pre-launch checklists, weekly report), the operator's weekly schedule, and a nine-prompt pack for anyone who won't install a skill.
 

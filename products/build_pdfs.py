@@ -35,7 +35,7 @@ def st(name, **kw):
 S = {
     "kicker": st("kicker", fontName="AvD", fontSize=8.5, leading=11, textColor=ORANGE, spaceAfter=3),
     "h1": st("h1", fontName="AvH", fontSize=24, leading=28, spaceBefore=2, spaceAfter=8),
-    "h2": st("h2", fontName="AvD", fontSize=13.5, leading=17, spaceBefore=12, spaceAfter=4),
+    "h2": st("h2", fontName="AvD", fontSize=13.5, leading=17, spaceBefore=12, spaceAfter=4, keepWithNext=1),
     "body": st("body"),
     "lead": st("lead", fontName="AvM", fontSize=12, leading=18, spaceAfter=8),
     "small": st("small", fontSize=8.5, leading=12, textColor=MUTED),
@@ -59,8 +59,9 @@ def tbl(rows, widths, small=False):
     cs = "cells" if small else "cell"
     data = [[Paragraph(str(c), S["cellb"] if i == 0 else S[cs]) for c in r] for i, r in enumerate(rows)]
     t = Table(data, colWidths=widths, repeatRows=1)
+    pad = 4 if small else 5
     style = [("VALIGN", (0, 0), (-1, -1), "TOP"), ("BACKGROUND", (0, 0), (-1, 0), INK),
-             ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6), ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+             ("TOPPADDING", (0, 0), (-1, -1), pad), ("BOTTOMPADDING", (0, 0), (-1, -1), pad), ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
              ("LINEBELOW", (0, 1), (-1, -1), 0.4, LINE)]
     for i in range(2, len(rows), 2): style.append(("BACKGROUND", (0, i), (-1, i), SAND))
     t.setStyle(TableStyle(style)); return t
@@ -83,6 +84,11 @@ def callout(*paras):
     t = Table([[pp] for pp in paras], colWidths=[CW])
     t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), CREAM), ("LINEBEFORE", (0, 0), (0, -1), 4, ORANGE), ("LEFTPADDING", (0, 0), (-1, -1), 16), ("RIGHTPADDING", (0, 0), (-1, -1), 14),
                            ("TOPPADDING", (0, 0), (-1, 0), 13), ("TOPPADDING", (0, 1), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -2), 4), ("BOTTOMPADDING", (0, -1), (-1, -1), 13)]))
+    return KeepTogether([t])
+
+def mistakes(rows):
+    t = Table([[Paragraph(a, S["cells"]), Paragraph(b, S["cells"])] for a, b in rows], colWidths=[CW / 2, CW / 2])
+    t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
     return KeepTogether([t])
 
 def stats(items):
@@ -243,7 +249,7 @@ free += [*section("band-seats", "22nd Century Marketing  ·  Free starter kit", 
          P("The script, word for word", "h2"),
          P("\"Before I build anything, I need to understand this business better than the competitors understand theirs. Some of these questions are about money. Be straight with me, because I can't do this well if I'm guessing.\"", "quote"),
          fillin(KICKOFF_Q), Spacer(1, 10),
-         P("Access and assets to collect", "h2"), checklist(ACCESS),
+         KeepTogether([P("Access and assets to collect", "h2"), checklist(ACCESS)]),
          Spacer(1, 16),
          *section("band-numbers", "Step two", "The three numbers"),
          P("Everything downstream is built from these. Fill them in before you write a single ad.", "lead"),
@@ -300,7 +306,7 @@ paid += [*section("band-seats", "22nd Century Marketing  ·  Manual 1 bundle", "
          *section("band-worksheets", "Worksheet 1", "Kickoff"),
          P("\"Before I build anything, I need to understand this business better than the competitors understand theirs. Some of these questions are about money. Be straight with me, because I can't do this well if I'm guessing.\"", "quote"),
          fillin(["Business / niche / city / service area"] + KICKOFF_Q), Spacer(1, 8),
-         P("Access and assets", "h2"), checklist(ACCESS), Spacer(1, 8),
+         KeepTogether([P("Access and assets", "h2"), checklist(ACCESS)]), Spacer(1, 8),
          P("Computed after the call", "h2"),
          fillin(["Gross margin  ->  break-even ROAS (1 / margin)", "Customer value x close rate x margin  ->  break-even CPL (aim for half)", "Starting daily budget, and the one-sentence reason", "Speed-to-lead plan: who calls, within how many minutes, after-hours"]),
          PageBreak(),
@@ -321,8 +327,8 @@ paid += [*section("band-seats", "22nd Century Marketing  ·  Manual 1 bundle", "
          P("Value-equation check", "h2"),
          fillin(["Dream outcome (not \"HVAC repair\": a cool house tonight)", "Perceived likelihood (reviews, guarantees, \"we've done 4,000 of these\")", "Time delay (same-day, this week)", "Effort and sacrifice (free estimate, no obligation, we handle the paperwork)", "Lead-gen offer or direct sale? Why?"]), Spacer(1, 8),
          P("The brief", "h2"),
-         fillin(["Business: [name], a [niche] in [city], serving [area]", "The offer (with the number in it)", "Who it's for (one line)", "Why us / proof", "How fast", "The ask (CTA)", "What happens after they respond: who calls, how fast", "Hard rules: service area, things the business won't say, compliance words to avoid"]), Spacer(1, 8),
-         callout(P("<b>Consistency check.</b> Offer in the ad = offer on the instant form = first words of the callback. When all three say the same thing, cost per lead drops and leads stop feeling like strangers.", "body")),
+         fillin(["Business: [name], a [niche] in [city], serving [area]", "The offer (with the number in it)", "Who it's for (one line)", "Why us / proof", "How fast", "The ask (CTA)", "What happens after they respond: who calls, how fast", "Hard rules: service area, things the business won't say, compliance words to avoid"]), Spacer(1, 6),
+         P("<b>Consistency check.</b> Offer in the ad = offer on the instant form = first words of the callback. When all three say the same thing, cost per lead drops and leads stop feeling like strangers.", "small"),
          PageBreak(),
          *section("band-dashboard", "Checklist 4", "Creative review"),
          P("Ogilvy: the headline is eighty cents of your dollar. On social video the headline is the first three seconds.", "lead"),
@@ -355,11 +361,10 @@ paid += [*section("band-seats", "22nd Century Marketing  ·  Manual 1 bundle", "
          P("One CMO can run marketing for many businesses, because the six seats under them are software. Batch by task, not by client.", "lead"),
          tbl([["Day", "What you do"], ["Monday", "All weekly reports."], ["Tuesday - Wednesday", "Creative day. Generate and approve new variants across every workspace. Preview widely, unlock narrowly."], ["Thursday", "Numbers across every dashboard; troubleshooting by symptom."], ["Friday", "Budget and scaling decisions; monthly ROI calls that are due."], ["Throughout", "The engine runs the 90%; approvals as they come."]], [1.5 * inch, CW - 1.5 * inch]), Spacer(1, 10),
          stats([("~$1M", "what an owner would pay to hire this department"), ("$3,000", "a month, what they'll pay you for the result"), ("$500", "a month in software and credits to deliver it")]),
-         Spacer(1, 8),
          P("The operator's math", "h2"),
          P("Roughly $2,500 a month in gross margin per business, from a seat you can run for several businesses at once. The tool made the department cheap. The CMO seat, yours, is what the owner is actually paying for."),
          P("Mistakes that get a CMO fired", "h2"),
-         tbl([["", ""], ["Overriding the rules engine on day three", "Approving one ad"], ["Launching with a weak offer", "Sloppy credits: unlocking everything"], ["Not defining \"lead\" up front", "Mismatched offer across ad, form, and callback"], ["Ignoring speed-to-lead", "Scaling past capacity"], ["Going silent", "Blaming the ads, or the business, when it's the follow-up or the offer"]], [CW / 2, CW / 2]),
+         mistakes([["Overriding the rules engine on day three", "Approving one ad"], ["Launching with a weak offer", "Sloppy credits: unlocking everything"], ["Not defining \"lead\" up front", "Mismatched offer across ad, form, and callback"], ["Ignoring speed-to-lead", "Scaling past capacity"], ["Going silent", "Blaming the ads, or the business, when it's the follow-up or the offer"]]),
          PageBreak(),
          *section("band-dashboard", "Prompt pack", "Nine prompts, one per workflow"),
          P("For Claude without the skill, ChatGPT, or a phone. Paste, then paste your notes underneath. Each prompt tells the model to ask for what it doesn't have rather than invent it.")]
