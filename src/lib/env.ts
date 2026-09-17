@@ -49,6 +49,7 @@ const schema = z.object({
 
   // Meta Pixel + CAPI
   META_PIXEL_ID: z.string().optional(),
+  GA_MEASUREMENT_ID: z.string().default("G-BQJ8RLRS8G"), // Google Analytics 4; loaded in production only
   META_CAPI_TOKEN: z.string().optional(),
 
   // Instagram API with Instagram Login (keyword auto-replies). If unset → Settings shows "coming soon".

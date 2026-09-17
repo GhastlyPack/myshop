@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Toaster } from "@/components/ui/sonner";
-import { env } from "@/lib/env";
+import { env, isProd } from "@/lib/env";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -19,6 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Toaster richColors position="top-center" />
       </body>
+      {/* GA4 site-wide. Skipped in dev so local clicks don't land in the report; set GA_MEASUREMENT_ID to override the id. */}
+      {isProd && <GoogleAnalytics gaId={env.GA_MEASUREMENT_ID} />}
     </html>
   );
 }
