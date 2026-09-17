@@ -8,7 +8,21 @@ export const dynamic = "force-dynamic";
 
 /** /admin lives outside the /app shell: minimal header, back link, read-only pages. Every page also calls requireAdmin(). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  try {
+    await requireAdmin();
+  } catch (e) {
+    // redirect() throws a control-flow error that must propagate; only surface real failures.
+    if (e instanceof Error && e.message.startsWith("[watchdog]")) {
+      console.error("[admin] auth stalled:", e.message);
+      return (
+        <main className="mx-auto max-w-xl px-6 py-16">
+          <h1 className="text-lg font-semibold">Admin couldn&apos;t verify your session</h1>
+          <pre className="mt-3 overflow-x-auto rounded-lg bg-muted p-3 text-xs">{e.message}</pre>
+        </main>
+      );
+    }
+    throw e;
+  }
   return (
     <div className="min-h-dvh bg-muted/30">
       <header className="border-b bg-background">

@@ -16,7 +16,24 @@ const when = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "
 
 export default async function AdminOverview() {
   await requireAdmin();
-  const o = await getAdminOverview();
+  let o: Awaited<ReturnType<typeof getAdminOverview>>;
+  try {
+    o = await getAdminOverview();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[admin] overview failed:", message);
+    return (
+      <div className="space-y-3 rounded-xl border border-destructive/40 bg-background p-5">
+        <h1 className="text-lg font-semibold">Overview couldn&apos;t load</h1>
+        <p className="text-sm text-muted-foreground">A step stalled or failed. This is the exact step, for debugging:</p>
+        <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs">{message}</pre>
+        <p className="text-xs text-muted-foreground">
+          Try <Link href="/admin/team" className="underline">Team</Link> or <Link href="/admin/stores" className="underline">Stores</Link>, and{" "}
+          <Link href="/api/admin/health" className="underline">health</Link>.
+        </p>
+      </div>
+    );
+  }
 
   const tiles = [
     { label: "Users", value: num(o.users) },
