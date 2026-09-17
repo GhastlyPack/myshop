@@ -1,5 +1,3 @@
-import { sendGAEvent } from "@next/third-parties/google";
-
 /**
  * Google Analytics 4 events. One name per funnel step so reports read like the product:
  *
@@ -16,24 +14,26 @@ import { sendGAEvent } from "@next/third-parties/google";
  */
 export type GaItem = { item_id: string; item_name: string; price?: number; quantity?: number; item_category?: string };
 
-function ready() {
-  return typeof window !== "undefined" && Array.isArray((window as unknown as { dataLayer?: unknown[] }).dataLayer);
+type DL = { dataLayer?: unknown[] };
+
+/**
+ * Queue a gtag command. Pushing `arguments` (not an array) is what gtag.js consumes, and queuing before
+ * gtag loads is fine: it drains the queue on load. Nothing is sent outside production.
+ */
+function gtag(..._args: unknown[]) {
+  if (typeof window === "undefined" || process.env.NODE_ENV !== "production") return;
+  // eslint-disable-next-line prefer-rest-params
+  ((window as DL).dataLayer ||= []).push(arguments);
 }
 
-/** Fire an event. Silent no-op when GA isn't loaded (dev, blocked, or before hydration). */
+/** Fire an event. */
 export function ga(event: string, params: Record<string, unknown> = {}) {
-  if (!ready()) return;
-  try {
-    sendGAEvent("event", event, params);
-  } catch {}
+  gtag("event", event, params);
 }
 
 /** Set user-scoped properties (e.g. role) for every following event in the session. */
 export function gaUser(props: Record<string, string | number | boolean>) {
-  if (!ready()) return;
-  try {
-    sendGAEvent("set", "user_properties", props);
-  } catch {}
+  gtag("set", "user_properties", props);
 }
 
 /** Shape a product for GA4 ecommerce params. */
