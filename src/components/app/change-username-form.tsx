@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { ga } from "@/lib/ga";
 import { checkUsername } from "@/app/app/onboarding/actions";
 import { changeUsername } from "@/app/app/settings/actions";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function ChangeUsernameForm({ current, host }: { current: string; host: s
         setRemote({ for: normalized, ok: false, message: r.error });
         return;
       }
+      ga("username_changed");
       toast.success(`Your link is now ${host}/${r.username}`);
       router.refresh();
     });

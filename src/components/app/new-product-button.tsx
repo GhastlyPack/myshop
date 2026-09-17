@@ -5,6 +5,7 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createProduct } from "@/app/app/actions";
 import { Button } from "@/components/ui/button";
+import { ga } from "@/lib/ga";
 
 export function NewProductButton({ variant = "default", label = "New product" }: { variant?: "default" | "outline"; label?: string }) {
   const [pending, start] = useTransition();
@@ -15,6 +16,7 @@ export function NewProductButton({ variant = "default", label = "New product" }:
       onClick={() =>
         start(async () => {
           try {
+            ga("product_created");
             await createProduct();
           } catch (e) {
             // redirect() throws a control-flow error that Next handles; anything else is real.

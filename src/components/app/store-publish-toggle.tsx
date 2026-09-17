@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { setStorePublished } from "@/app/app/settings/actions";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ga } from "@/lib/ga";
 
 export function StorePublishToggle({ published: initial, username }: { published: boolean; username: string }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function StorePublishToggle({ published: initial, username }: { published
         toast.error(res.error);
         return;
       }
+      ga(next ? "store_published" : "store_unpublished");
       toast.success(next ? "Your store is live." : "Store unpublished. Visitors see a not-found page.");
       router.refresh();
     });

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ga } from "@/lib/ga";
 import { Button } from "@/components/ui/button";
 import { resolveTheme, THEME_PRESETS, type ResolvedTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,7 @@ export function DesignEditor({
       setTheme(res.theme);
       setSaved(res.theme);
       setSavedBgImageUrl(bgImageUrl);
+      ga("design_saved", { preset: theme.preset ?? "custom", layout: theme.layout, heading_font: theme.headingFont });
       toast.success("Design saved. Your store is updated.");
     });
   }

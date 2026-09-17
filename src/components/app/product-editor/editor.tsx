@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ga } from "@/lib/ga";
 import { saveProduct, type DiscountCodeRow, type FileRow } from "@/app/app/products/[id]/actions";
 import { CheckoutTab } from "@/components/app/product-editor/checkout-tab";
 import { ContentTab } from "@/components/app/product-editor/content-tab";
@@ -109,6 +110,7 @@ export function ProductEditor({
       setStatus(res.status);
       setSavedSlug(res.slug);
       setForm((f) => ({ ...f, slug: res.slug }));
+      ga(kind === "publish" ? "product_published" : kind === "unpublish" ? "product_unpublished" : "product_saved", { product_type: form.type, is_free: Number(form.priceCents) === 0, card_style: form.cardStyle });
       toast.success(kind === "publish" ? "Published. It is live on your store." : kind === "unpublish" ? "Moved back to draft." : "Saved.");
       router.refresh();
     });

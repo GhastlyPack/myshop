@@ -7,6 +7,7 @@ import { applyDiscountAction, checkoutAction, type CheckoutState } from "@/app/[
 import { formatPrice } from "./price";
 import { sendBeacon, usePageUrl, useSessionId } from "./session";
 import { trackPixel } from "@/components/meta-pixel";
+import { ga } from "@/lib/ga";
 
 type Props = {
   username: string;
@@ -187,6 +188,14 @@ export function CheckoutForm(p: Props) {
       onSubmit={() => {
         sendBeacon({ storeId: p.storeId, productId: p.productId, type: "checkout_start" });
         trackPixel("InitiateCheckout", { content_ids: [p.productId, ...(p.bump && bumpOn ? [p.bump.productId] : [])], currency: p.currency, value: total / 100 });
+        ga("begin_checkout", {
+          store: p.username,
+          currency: p.currency.toUpperCase(),
+          value: total / 100,
+          is_free: p.priceCents === 0,
+          bump_added: Boolean(p.bump && bumpOn),
+          items: [{ item_id: p.productId, item_name: p.slug, price: p.priceCents / 100, quantity: 1 }, ...(p.bump && bumpOn ? [{ item_id: p.bump.productId, item_name: p.bump.title, price: p.bump.bumpCents / 100, quantity: 1 }] : [])],
+        });
       }}
       className="space-y-4"
       noValidate={false}

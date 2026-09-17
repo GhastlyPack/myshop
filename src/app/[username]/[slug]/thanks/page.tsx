@@ -8,6 +8,7 @@ import { entitlements, orders, productFiles, productLinks, products, reviews, st
 import { StoreFooter } from "@/components/storefront/footer";
 import { PendingPoll } from "@/components/storefront/pending-poll";
 import { PixelEvent } from "@/components/storefront/pixel-event";
+import { GaEvent } from "@/components/analytics/ga-event";
 import { ReviewForm } from "@/components/storefront/review-form";
 import { CompactStoreHeader } from "@/components/storefront/store-header";
 import { ThemeRoot } from "@/components/storefront/theme-root";
@@ -76,6 +77,19 @@ export default async function ThanksPage({ params, searchParams }: Props) {
         <CompactStoreHeader store={store} theme={theme} />
         <div className="mt-8 space-y-6">
           {order.status === "pending" && <PendingPoll email={order.buyerEmail} />}
+          {paid && (
+            <GaEvent
+              name={order.amountCents === 0 ? "generate_lead" : "purchase"}
+              persist={`order:${order.id}`}
+              params={{
+                transaction_id: order.id,
+                store: store.username,
+                currency: order.currency.toUpperCase(),
+                value: order.amountCents / 100,
+                items: items.map((it) => ({ item_id: it.product.id, item_name: it.product.title, price: it.product.priceCents / 100, quantity: 1 })),
+              }}
+            />
+          )}
           {paid && (
             <PixelEvent
               event={order.amountCents === 0 ? "Lead" : "Purchase"}

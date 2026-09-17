@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight, ChevronRight } from "lucide-react";
 import { formatPrice } from "./price";
 import { sendBeacon } from "./session";
+import { ga, gaItem } from "@/lib/ga";
 
 export type CardProduct = {
   id: string;
@@ -51,7 +52,10 @@ function Cta({ text, external, small }: { text: string; external: boolean; small
  */
 export function ProductCard({ product: p, mode = "list" }: { product: CardProduct; mode?: Mode }) {
   const price = formatPrice(p.priceCents, p.currency);
-  const onClick = () => sendBeacon({ storeId: p.storeId, productId: p.id, type: "click" });
+  const onClick = () => {
+    sendBeacon({ storeId: p.storeId, productId: p.id, type: "click" });
+    ga("select_item", { item_list_name: mode, external: p.external, items: [gaItem(p)] });
+  };
   const linkProps = p.external ? { target: "_blank", rel: "noreferrer" } : {};
   const style = mode === "hero" ? "preview" : mode === "grid" && p.cardStyle === "callout" ? "preview" : p.cardStyle;
   const image = p.bannerUrl ?? p.thumbUrl;

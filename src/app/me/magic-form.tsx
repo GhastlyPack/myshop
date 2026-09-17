@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { ga } from "@/lib/ga";
 import { Inbox } from "lucide-react";
 import { requestLinkAction, type MagicState } from "./actions";
 
 export function MagicForm({ initialError }: { initialError?: string }) {
   const [state, action, pending] = useActionState<MagicState, FormData>(requestLinkAction, null);
+  useEffect(() => {
+    if (state && "sent" in state) ga("library_link_requested");
+  }, [state]);
   if (state && "sent" in state) {
     return (
       <div className="rounded-2xl border bg-white p-6 text-center shadow-sm">

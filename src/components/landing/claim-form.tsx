@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { normalizeUsername, usernameError } from "@/lib/reserved";
+import { ga } from "@/lib/ga";
 
 /**
  * "visitmy.shop/ [yourname] → Claim" on the lander. Sends the visitor to
@@ -22,6 +23,7 @@ export function ClaimForm({ loginBase, tone = "light", autoFocus }: { loginBase:
       setError(err);
       return;
     }
+    ga("claim_link_start", { location: tone === "orange" ? "footer_cta" : "hero", username_entered: Boolean(u) });
     const returnTo = u ? `/app/onboarding?username=${encodeURIComponent(u)}` : "/app";
     router.push(`${loginBase}?returnTo=${encodeURIComponent(returnTo)}`);
   }

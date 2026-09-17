@@ -8,6 +8,7 @@ import { getBuyerEmail } from "@/lib/buyer-session";
 import { publicUrl } from "@/lib/storage";
 import { signOutAction } from "./actions";
 import { MagicForm } from "./magic-form";
+import { GaEvent } from "@/components/analytics/ga-event";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My downloads", robots: { index: false } };
@@ -70,6 +71,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
   const library = await loadLibrary(email);
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-10 sm:py-14" style={FONT}>
+      <GaEvent name="library_open" params={{ stores: library.length, items: library.reduce((n, s) => n + s.items.length, 0) }} user={{ user_role: "buyer" }} />
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium tracking-widest text-neutral-500 uppercase">visitmy.shop</p>

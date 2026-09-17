@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { normalizeUsername, usernameError } from "@/lib/reserved";
 import { uploadFile } from "@/lib/uploads-client";
 import { cn } from "@/lib/utils";
+import { ga } from "@/lib/ga";
 
 export function OnboardingForm({ suggestedUsername, suggestedName }: { suggestedUsername: string; suggestedName: string }) {
   const router = useRouter();
@@ -68,6 +69,8 @@ export function OnboardingForm({ suggestedUsername, suggestedName }: { suggested
           toast.error(`Store created, but the photo did not upload: ${(e as Error).message}`);
         }
       }
+      ga("sign_up", { method: "auth0" });
+      ga("store_created", { username: normalized, has_avatar: Boolean(avatar), has_bio: Boolean(bio) });
       toast.success("Your store is live.");
       router.replace("/app");
       router.refresh();

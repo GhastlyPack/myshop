@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { GaAutoEvents } from "@/components/analytics/ga-auto-events";
 import { Toaster } from "@/components/ui/sonner";
 import { env, isProd } from "@/lib/env";
 import "./globals.css";
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
         {children}
         <Toaster richColors position="top-center" />
+        <GaAutoEvents />
       </body>
       {/* GA4 site-wide. Skipped in dev so local clicks don't land in the report; set GA_MEASUREMENT_ID to override the id. */}
       {isProd && <GoogleAnalytics gaId={env.GA_MEASUREMENT_ID} />}

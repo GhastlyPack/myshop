@@ -1,11 +1,15 @@
 "use client";
 
-import { Fragment, useActionState } from "react";
+import { Fragment, useActionState, useEffect } from "react";
+import { ga } from "@/lib/ga";
 import { Check, Star } from "lucide-react";
 import { submitReview, type ReviewState } from "@/app/[username]/[slug]/thanks/actions";
 
 export function ReviewForm({ token, productTitle, defaultName }: { token: string; productTitle: string; defaultName: string }) {
   const [state, action, pending] = useActionState<ReviewState, FormData>(submitReview, null);
+  useEffect(() => {
+    if (state && "ok" in state) ga("review_submitted", { product: productTitle });
+  }, [state, productTitle]);
   if (state && "ok" in state) {
     return (
       <div className="flex items-center gap-3">

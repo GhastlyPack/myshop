@@ -8,6 +8,7 @@ import { ProductCard, type CardProduct } from "@/components/storefront/product-c
 import { StoreHeader } from "@/components/storefront/store-header";
 import { socialHrefs } from "@/components/storefront/socials";
 import { JsonLd } from "@/components/seo/json-ld";
+import { GaEvent } from "@/components/analytics/ga-event";
 import { absoluteUrl } from "@/lib/site";
 import Markdown from "react-markdown";
 import { ThemeRoot } from "@/components/storefront/theme-root";
@@ -113,6 +114,7 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
     <ThemeRoot theme={theme}>
       <JsonLd data={profileLd} />
       {!isPreview && <TrackView storeId={store.id} type="view" />}
+      {!isPreview && <GaEvent name="store_view" params={{ store: store.username, product_count: products.length, layout: theme.layout }} />}
       <main className="mx-auto w-full max-w-[600px] px-4 pt-12 pb-6 sm:px-6 sm:pt-16">
         <StoreHeader store={store} theme={theme} />
 

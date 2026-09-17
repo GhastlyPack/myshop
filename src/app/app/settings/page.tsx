@@ -1,3 +1,4 @@
+import { GaEvent } from "@/components/analytics/ga-event";
 import type { Metadata } from "next";
 import { ChangeUsernameForm } from "@/components/app/change-username-form";
 import { DeleteStoreDialog } from "@/components/app/delete-store-dialog";
@@ -12,11 +13,12 @@ import { publicUrl } from "@/lib/storage";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ ig_error?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ ig_error?: string; connected?: string }> }) {
   const { store } = await requireStore();
-  const { ig_error } = await searchParams;
+  const { ig_error, connected } = await searchParams;
   return (
     <div className="space-y-8">
+      {(connected === "stripe" || connected === "instagram") && <GaEvent name={`${connected}_connected`} once={`connected:${connected}`} />}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Your profile, links, currency and payouts.</p>

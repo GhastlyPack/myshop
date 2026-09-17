@@ -10,6 +10,8 @@ import { Stars } from "@/components/storefront/stars";
 import { CompactStoreHeader } from "@/components/storefront/store-header";
 import { ProductCard, type CardProduct } from "@/components/storefront/product-card";
 import { JsonLd } from "@/components/seo/json-ld";
+import { GaEvent } from "@/components/analytics/ga-event";
+import { gaItem } from "@/lib/ga";
 import { absoluteUrl } from "@/lib/site";
 import type { Product } from "@/db/schema";
 import { ThemeRoot } from "@/components/storefront/theme-root";
@@ -127,6 +129,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
       <JsonLd data={productLd} />
       <JsonLd data={breadcrumbLd} />
       {!isPreview && <TrackView storeId={store.id} productId={product.id} type="product_view" />}
+      {!isPreview && (
+        <GaEvent name="view_item" params={{ store: store.username, currency: product.currency.toUpperCase(), value: product.priceCents / 100, is_free: product.priceCents === 0, items: [gaItem(product)] }} />
+      )}
       {!isPreview && (
         <PixelEvent
           event="ViewContent"
