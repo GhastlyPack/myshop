@@ -23,7 +23,7 @@ export function DmKeywordHelper({ username, slug, keyword, title, replyText }: {
     return <p className="text-xs text-muted-foreground">Add a DM keyword to generate a ready-to-paste Instagram caption, auto-reply and story CTA.</p>;
   }
 
-  const link = `${origin || ""}/${username}/${slug}?src=ig`;
+  const link = `${origin || ""}/${username}/${slug}`;
   const blocks = [
     {
       label: "Post caption",
@@ -32,7 +32,7 @@ export function DmKeywordHelper({ username, slug, keyword, title, replyText }: {
     },
     {
       label: "Auto-reply DM",
-      hint: "Sent automatically when Instagram is connected in Settings.",
+      hint: "Sent automatically when Instagram is connected. A product card with a button follows this message.",
       text: replyText?.trim()
         ? replyText.replace(/\{\{\s*link\s*\}\}/gi, link).replace(/\{\{\s*title\s*\}\}/gi, title).replace(/\{\{\s*name\s*\}\}/gi, "@theirname") + (replyText.includes("{{link}}") ? "" : `\n${link}`)
         : `Here's ${title}: ${link}`,

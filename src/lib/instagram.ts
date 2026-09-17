@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { instagramAccounts, instagramEvents, instagramReplies, products, stores, type InstagramAccount, type Product } from "@/db/schema";
 import { env, instagramConfigured } from "@/lib/env";
 import { newId } from "@/lib/ids";
+import { publicUrl } from "@/lib/storage";
 
 /**
  * Instagram API with Instagram Login.
@@ -116,14 +117,46 @@ export async function refreshIfNeeded(acct: InstagramAccount): Promise<string> {
 }
 
 // ---------- sending ----------
+type Recipient = { id: string } | { comment_id: string };
+
+async function sendMessage(igUserId: string, token: string, recipient: Recipient, message: Record<string, unknown>) {
+  await graph(`/${igUserId}/messages`, { method: "POST", token, body: JSON.stringify({ recipient, message }) });
+}
 export async function privateReplyToComment(igUserId: string, token: string, commentId: string, text: string) {
-  await graph(`/${igUserId}/messages`, { method: "POST", token, body: JSON.stringify({ recipient: { comment_id: commentId }, message: { text } }) });
+  await sendMessage(igUserId, token, { comment_id: commentId }, { text });
 }
 export async function sendDm(igUserId: string, token: string, recipientId: string, text: string) {
-  await graph(`/${igUserId}/messages`, { method: "POST", token, body: JSON.stringify({ recipient: { id: recipientId }, message: { text } }) });
+  await sendMessage(igUserId, token, { id: recipientId }, { text });
 }
 export async function publicReplyToComment(token: string, commentId: string, text: string) {
   await graph(`/${commentId}/replies`, { method: "POST", token, query: { message: text } });
+}
+
+/** Product card (generic template): image, title, price line, one "Get it" button. */
+export async function sendProductCard(
+  igUserId: string,
+  token: string,
+  recipientId: string,
+  card: { title: string; subtitle: string; imageUrl: string | null; url: string; button: string },
+) {
+  const element: Record<string, unknown> = {
+    title: card.title.slice(0, 80),
+    subtitle: card.subtitle.slice(0, 80),
+    default_action: { type: "web_url", url: card.url },
+    buttons: [{ type: "web_url", url: card.url, title: card.button.slice(0, 20) }],
+  };
+  if (card.imageUrl) element.image_url = card.imageUrl;
+  await sendMessage(igUserId, token, { id: recipientId }, { attachment: { type: "template", payload: { template_type: "generic", elements: [element] } } });
+}
+
+/** Messaging events only carry the sender id; look the handle up (best effort). */
+export async function lookupUsername(token: string, igScopedId: string): Promise<string | null> {
+  try {
+    const r = await graph<{ username?: string }>(`/${igScopedId}`, { token, query: { fields: "username" } });
+    return r.username ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------- webhook ----------
@@ -152,12 +185,29 @@ type CommentChange = { field: "comments"; value: { id: string; text?: string; fr
 type MessagingEvent = { sender?: { id: string }; recipient?: { id: string }; message?: { mid?: string; text?: string; is_echo?: boolean } };
 export type WebhookBody = { object?: string; entry?: { id: string; changes?: CommentChange[]; messaging?: MessagingEvent[] }[] };
 
-export function replyText(product: Pick<Product, "title" | "slug" | "dmReplyText">, username: string, recipient?: string | null) {
-  const link = `${env.APP_BASE_URL}/${username}/${product.slug}?src=ig`;
+export type ReplyPlan = { text: string; link: string; linkInline: boolean };
+
+/**
+ * The creator's message with placeholders filled. If they put {{link}} in the middle
+ * of a sentence it stays inline; a trailing/absent {{link}} is dropped from the text
+ * because the product card that follows carries the link with a proper button.
+ */
+export function buildReply(product: Pick<Product, "title" | "slug" | "dmReplyText">, username: string, recipient?: string | null): ReplyPlan {
+  const link = `${env.APP_BASE_URL}/${username}/${product.slug}`;
+  const name = recipient ? `@${recipient}` : "there";
   const custom = product.dmReplyText?.trim();
-  if (!custom) return `Here's ${product.title}: ${link}`;
-  const out = custom.replace(/\{\{\s*link\s*\}\}/gi, link).replace(/\{\{\s*title\s*\}\}/gi, product.title).replace(/\{\{\s*name\s*\}\}/gi, recipient ? `@${recipient}` : "there");
-  return out.includes(link) ? out : `${out}\n${link}`; // never send a reply without the link
+  if (!custom) return { text: `Hey ${name}! Here's ${product.title}.`, link, linkInline: false };
+  const text = custom.replace(/\{\{\s*title\s*\}\}/gi, product.title).replace(/\{\{\s*name\s*\}\}/gi, name);
+  const trailing = /\s*\{\{\s*link\s*\}\}\s*$/i;
+  if (trailing.test(text)) return { text: text.replace(trailing, "").trim(), link, linkInline: false };
+  if (/\{\{\s*link\s*\}\}/i.test(text)) return { text: text.replace(/\{\{\s*link\s*\}\}/gi, link), link, linkInline: true };
+  return { text, link, linkInline: false };
+}
+
+/** Back-compat single-string form (text + link) used by tests. */
+export function replyText(product: Pick<Product, "title" | "slug" | "dmReplyText">, username: string, recipient?: string | null) {
+  const r = buildReply(product, username, recipient);
+  return r.linkInline ? r.text : `${r.text}\n${r.link}`;
 }
 
 /** Process one webhook payload. Never throws; every attempt is logged in instagram_replies. */
@@ -186,7 +236,7 @@ export async function handleWebhook(body: WebhookBody) {
     const store = await db.query.stores.findFirst({ where: eq(stores.id, acct.storeId) });
     if (!store || !store.published) continue;
     const candidates = await db
-      .select({ id: products.id, dmKeyword: products.dmKeyword, title: products.title, slug: products.slug, dmReplyText: products.dmReplyText })
+      .select({ id: products.id, dmKeyword: products.dmKeyword, title: products.title, slug: products.slug, dmReplyText: products.dmReplyText, subtitle: products.subtitle, thumbnailKey: products.thumbnailKey, priceCents: products.priceCents, currency: products.currency })
       .from(products)
       .where(and(eq(products.storeId, store.id), eq(products.status, "published"), isNull(products.deletedAt)));
     const token = await refreshIfNeeded(acct);
@@ -206,7 +256,10 @@ export async function handleWebhook(body: WebhookBody) {
         from: ch.value.from,
         keyword: m.kw,
         send: async () => {
-          await privateReplyToComment(acct.igUserId, token, ch.value.id, replyText(product, store.username, ch.value.from?.username));
+          const plan = buildReply(product, store.username, ch.value.from?.username);
+          // Meta allows one private reply per comment; it opens the thread, then the card goes as a normal DM.
+          await privateReplyToComment(acct.igUserId, token, ch.value.id, plan.linkInline ? plan.text : plan.text);
+          if (ch.value.from?.id) await sendCard(acct.igUserId, token, ch.value.from.id, product, plan).catch((e) => console.error("[instagram] card failed", e));
           if (acct.publicReply) await publicReplyToComment(token, ch.value.id, "Sent you a DM!").catch(() => {});
         },
       });
@@ -226,11 +279,40 @@ export async function handleWebhook(body: WebhookBody) {
         sourceId: mid,
         from: { id: ev.sender.id },
         keyword: m.kw,
-        send: () => sendDm(acct.igUserId, token, ev.sender!.id!, replyText(product, store.username, null)),
+        send: async () => {
+          const who = await lookupUsername(token, ev.sender!.id!);
+          const plan = buildReply(product, store.username, who);
+          await sendDm(acct.igUserId, token, ev.sender!.id!, plan.text);
+          await sendCard(acct.igUserId, token, ev.sender!.id!, product, plan).catch((e) => console.error("[instagram] card failed", e));
+        },
       });
     }
   }
   return { handled };
+}
+
+type CardProduct = Pick<Product, "title" | "subtitle" | "thumbnailKey" | "priceCents" | "currency">;
+function priceLabel(p: CardProduct) {
+  if (p.priceCents === 0) return "Free";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency.toUpperCase(), minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2 }).format(p.priceCents / 100);
+}
+/** Card with image + button; if the template is rejected, send the link as text so nobody is left without it. */
+async function sendCard(igUserId: string, token: string, recipientId: string, product: CardProduct, plan: ReplyPlan) {
+  if (plan.linkInline) return; // link already in the text
+  const img = publicUrl(product.thumbnailKey);
+  const imageUrl = img && img.startsWith("http") ? img : null;
+  try {
+    await sendProductCard(igUserId, token, recipientId, {
+      title: product.title,
+      subtitle: [priceLabel(product), product.subtitle].filter(Boolean).join(" · "),
+      imageUrl,
+      url: plan.link,
+      button: product.priceCents === 0 ? "Get it free" : "Get it",
+    });
+  } catch (e) {
+    console.error("[instagram] template rejected, sending link", e);
+    await sendDm(igUserId, token, recipientId, plan.link);
+  }
 }
 
 async function sendOnce(a: {
