@@ -16,7 +16,8 @@ const ROWS: [string, string, string][] = [
   ["Design", "Font pairs, layouts, colors, backgrounds, button and card shapes", "Themes and colors, more on paid plans"],
   ["Buyer download library", "Yes, at visitmy.shop/me", "No"],
   ["Reviews from buyers", "Yes, you approve them", "No"],
-  ["Pixel tracking", "Every store", "Paid plans"],
+  ["Pixel tracking", "Pro plan ($49)", "Paid plans"],
+  ["Price", "$9 Basic, $49 Pro, 14-day Pro trial", "Free tier, paid tiers for commerce"],
   ["Plain links to other places", "Yes, link products", "Yes, that is the product"],
 ];
 

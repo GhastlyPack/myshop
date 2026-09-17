@@ -4,21 +4,23 @@ import { Article, MarketingShell } from "@/components/landing/shell";
 
 export const metadata: Metadata = {
   title: "Stan store alternative: visitmy.shop vs Stan",
-  description: "A detailed comparison of visitmy.shop and Stan store for creators selling digital products from their Instagram bio: design, checkout, URLs, reviews, buyer library, and price.",
+  description: "visitmy.shop vs Stan store for creators selling digital products from their bio: $9 and $49 plans against $29 and $99, design control, checkout, URLs, reviews, buyer library, and fees.",
   alternates: { canonical: "/compare/stan-store" },
 };
 
 const ROWS: [string, string, string][] = [
-  ["Monthly price", "Free during early access", "$29 (Creator) or $99 (Creator Pro)"],
-  ["Fee on sales", "0% platform fee. Stripe processing only", "0% platform fee. Stripe processing only"],
-  ["Store design", "Font pairs, layouts, colors, backgrounds, button and card shapes, live preview", "A theme plus button and background color"],
+  ["Monthly price", "$9 Basic or $49 Pro", "$29 Creator or $99 Creator Pro"],
+  ["Fee on sales", "5% on Basic, 0% on Pro", "0% on both plans"],
+  ["Free trial", "14 days of full Pro, no card", "14 days"],
+  ["Store design", "Preset themes on Basic; full editor (fonts, colors, layout) on Pro", "A theme plus button and background color"],
   ["Product URLs", "visitmy.shop/you/my-guide", "stan.store/you/p/my-guide-4821, numeric suffix forced"],
   ["Free download asks for", "Name and email", "Name, email, full mailing address, two checkboxes, reCAPTCHA"],
   ["Buyer download library", "Yes, at visitmy.shop/me, across every creator", "No"],
   ["Reviews from buyers", "Collected after download, you approve", "Pasted in by hand"],
-  ["Pixel and analytics", "Meta Pixel and Conversions API on every store", "Pixel on the $99 plan"],
-  ["Remove platform branding", "Small footer badge on every store today", "$99 plan"],
-  ["Instagram DM keyword", "Per product, custom reply text", "AutoDM, keyword to one message"],
+  ["Pixel tracking", "Meta, Google, and TikTok on Pro ($49)", "Pixel on the $99 plan"],
+  ["Remove platform branding", "Pro ($49)", "$99 plan"],
+  ["Instagram DM keyword", "Per product with custom reply text, on Pro", "AutoDM, keyword to one message"],
+  ["Discount codes, order bumps, limited quantity", "Pro", "Paid plans, one bump on Pro"],
   ["Courses, memberships, bookings", "Coming soon", "Yes, on paid plans"],
 ];
 
@@ -80,13 +82,15 @@ export default function StanComparePage() {
           Every buyer gets a magic-link library at visitmy.shop/me with everything they have ever bought, from every creator on the platform. No more
           digging through email for a file from six months ago.
         </p>
-        <h3>Pixel tracking on every store</h3>
-        <p>Meta Pixel and the Conversions API are on by default. Stan reserves pixel tracking for its $99 plan.</p>
+        <h3>Pixel tracking at half the price</h3>
+        <p>Meta, Google, and TikTok pixels come with Pro at $49. Stan reserves pixel tracking for its $99 plan.</p>
 
-        <h2>Pricing</h2>
+        <h2>Pricing: cut Stan in half, keep 100% of your sales</h2>
         <p>
-          Stan is $29 a month before your first sale, or $99 for Pro. visitmy.shop is free during early access with no platform fee; you pay Stripe’s
-          processing fee only. See <Link href="/pricing">pricing</Link>.
+          Stan is $29 a month before your first sale and $99 for Creator Pro. visitmy.shop is $9 for Basic and $49 for Pro: a third of their entry
+          price and half their top price. The honest difference is the fee. Stan charges 0% on both plans; our Basic plan keeps 5% of each sale and Pro
+          keeps nothing. Under about $800 a month in sales, Basic still comes out cheaper than Stan’s $29. Above that, Pro at $49 with a 0% fee beats
+          Stan’s $99. Every account starts with 14 days of full Pro access, no card required. See <Link href="/pricing">pricing</Link>.
         </p>
 
         <h2>Moving from Stan</h2>

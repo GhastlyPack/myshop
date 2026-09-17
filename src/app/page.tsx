@@ -9,6 +9,7 @@ import { LandingNav } from "@/components/landing/nav";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, SITE } from "@/lib/site";
 import { HeroPhone } from "@/components/landing/phone";
+import { PlanCards } from "@/components/landing/plan-cards";
 import { ThemeCards } from "@/components/landing/theme-cards";
 import { getCurrentUser, loginPath } from "@/lib/auth";
 import "@/components/storefront/storefront.css";
@@ -44,17 +45,19 @@ const FEATURES = [
   ["Clean product links", "visitmy.shop/you/my-guide. No random numbers stapled to the end."],
   ["Reviews from buyers", "After the download, buyers rate it and leave a line. You approve what shows."],
   ["A library for your buyers", "Everything they’ve ever bought, from every creator, behind one magic link at visitmy.shop/me."],
-  ["Analytics on every plan", "Views, clicks per card, conversions, and where the traffic came from. Meta Pixel and Conversions API included."],
-  ["Instagram DM keyword", "Give a product a keyword and get the caption, the auto-reply, and the story CTA, ready to paste."],
+  ["Analytics", "Views, clicks per card, conversions, and where the traffic came from. Meta, Google, and TikTok pixels on Pro."],
+  ["Instagram DM keyword", "Give a product a keyword and get the caption, the auto-reply, and the story CTA, ready to paste. Auto-replies on Pro."],
 ];
 
 const COMPARE = [
+  ["Price", "$9 Basic, $49 Pro", "$29, $99", "Free, paid tiers"],
+  ["Fee on sales", "5% Basic, 0% Pro", "0%", "Yes on commerce tiers"],
   ["Fonts, layouts, backgrounds", "Full control", "Theme and two colors", "Limited"],
   ["Product URLs", "visitmy.shop/you/my-guide", "Numeric suffix", "None"],
   ["Buyer download library", "Yes", "No", "No"],
   ["Reviews collected from buyers", "Yes", "No", "No"],
   ["A free download asks for", "Name and email", "Full mailing address", "n/a"],
-  ["Pixel tracking", "Every plan", "$99 plan", "Paid plan"],
+  ["Pixel tracking", "Pro, $49", "$99 plan", "Paid plan"],
 ];
 
 export default async function Home() {
@@ -96,7 +99,7 @@ export default async function Home() {
               )}
             </div>
             <p className="ld-muted mt-6 text-sm">
-              No code. Your own Stripe account. Live in five minutes.{" "}
+              From $9 a month. 14-day free trial with full Pro access, no card required.{" "}
               <Link href="/demo" className="underline underline-offset-4 hover:text-[var(--ld-ink)]">
                 See a live store
               </Link>
@@ -160,6 +163,25 @@ export default async function Home() {
           </div>
           <Link href="/cole" className="ld-btn ld-btn-ghost mt-10">
             See a live store
+          </Link>
+        </div>
+      </section>
+
+      {/* ---------- pricing ---------- */}
+      <section id="pricing" className="scroll-mt-20 border-t ld-line">
+        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
+          <div className="max-w-2xl">
+            <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">Start at $9. Keep up to 100%.</h2>
+            <p className="ld-muted mt-5 text-lg leading-relaxed">
+              Basic keeps 95% of each sale. When your sales grow, Pro pays for itself by dropping the fee to zero. Stan charges $29 and $99; we cut
+              that in half and let you keep 100% of your sales on Pro.
+            </p>
+          </div>
+          <div className="mt-12">
+            <PlanCards ctaHref={user ? "/app" : loginHref} />
+          </div>
+          <Link href="/pricing" className="ld-btn ld-btn-ghost mt-8">
+            Full pricing details
           </Link>
         </div>
       </section>
