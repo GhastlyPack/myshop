@@ -280,7 +280,9 @@ async function main() {
       assert.ok(mails.length >= Math.min(before + 1, 5));
       assert.equal(mails[0].to, after?.buyerEmail);
       assert.match(mails[0].subject, /Growth Guide/);
-      assert.ok(mails[0].html.includes(`/${username}/guide/thanks?e=${e[0].token}`));
+      // Shared delivery template: per-file /d/<token> links (none here: the test product has no files) + buyer portal + store link.
+      assert.ok(mails[0].html.includes("/me"));
+      assert.ok(mails[0].html.includes(`/${username}`));
       const purchases = await db.select().from(events).where(and(eq(events.storeId, sid), eq(events.type, "purchase")));
       assert.equal(purchases.length, 1);
       assert.deepEqual(purchases[0].source, { src: "ig" });
