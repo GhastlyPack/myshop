@@ -25,7 +25,7 @@ export async function GET() {
   try {
     await withTimeout(db.execute(sql`select 1`), 8000);
     ping = { ok: true, ms: Date.now() - t0 };
-    sessions = (
+    sessions = Array.from(
       await withTimeout(
         db.execute(sql`
           select pid, state, wait_event_type, wait_event, usename, application_name,
@@ -36,9 +36,9 @@ export async function GET() {
           order by xact_start nulls last
           limit 40`),
         8000,
-      )
-    ).rows;
-    blocked = (
+      ),
+    );
+    blocked = Array.from(
       await withTimeout(
         db.execute(sql`
           select b.pid as blocked_pid, left(b.query, 120) as blocked_query,
@@ -47,8 +47,8 @@ export async function GET() {
           where cardinality(pg_blocking_pids(b.pid)) > 0
           limit 40`),
         8000,
-      )
-    ).rows;
+      ),
+    );
   } catch (e) {
     ping = { ok: false, ms: Date.now() - t0, error: (e as Error).message };
   }
