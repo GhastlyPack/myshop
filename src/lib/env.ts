@@ -52,7 +52,20 @@ const schema = z.object({
   ADMIN_EMAILS: z.string().default(""),
 });
 
-const parsed = schema.safeParse(process.env);
+// Treat empty strings as unset (Vercel imports of .env.example leave blanks), and let
+// Vercel's own URL stand in for APP_BASE_URL on previews when it isn't set explicitly.
+const raw: Record<string, string | undefined> = {};
+for (const [k, v] of Object.entries(process.env)) raw[k] = v === "" ? undefined : v;
+// The Auth0 Vercel integration writes `auth_AUTH0_*`; accept those as fallbacks.
+for (const k of ["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_SECRET"] as const) {
+  if (!raw[k] && raw[`auth_${k}`]) raw[k] = raw[`auth_${k}`];
+}
+if (!raw.APP_BASE_URL) {
+  const vercelHost = raw.VERCEL_ENV === "production" ? raw.VERCEL_PROJECT_PRODUCTION_URL : raw.VERCEL_URL;
+  if (vercelHost) raw.APP_BASE_URL = `https://${vercelHost}`;
+}
+
+const parsed = schema.safeParse(raw);
 if (!parsed.success) {
   console.error("Invalid environment:", parsed.error.flatten().fieldErrors);
   throw new Error("Invalid environment variables");
