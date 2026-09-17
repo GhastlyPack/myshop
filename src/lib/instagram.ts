@@ -152,8 +152,12 @@ type CommentChange = { field: "comments"; value: { id: string; text?: string; fr
 type MessagingEvent = { sender?: { id: string }; recipient?: { id: string }; message?: { mid?: string; text?: string; is_echo?: boolean } };
 export type WebhookBody = { object?: string; entry?: { id: string; changes?: CommentChange[]; messaging?: MessagingEvent[] }[] };
 
-export function replyText(product: Pick<Product, "title" | "slug">, username: string) {
-  return `Here's ${product.title}: ${env.APP_BASE_URL}/${username}/${product.slug}?src=ig`;
+export function replyText(product: Pick<Product, "title" | "slug" | "dmReplyText">, username: string, recipient?: string | null) {
+  const link = `${env.APP_BASE_URL}/${username}/${product.slug}?src=ig`;
+  const custom = product.dmReplyText?.trim();
+  if (!custom) return `Here's ${product.title}: ${link}`;
+  const out = custom.replace(/\{\{\s*link\s*\}\}/gi, link).replace(/\{\{\s*title\s*\}\}/gi, product.title).replace(/\{\{\s*name\s*\}\}/gi, recipient ? `@${recipient}` : "there");
+  return out.includes(link) ? out : `${out}\n${link}`; // never send a reply without the link
 }
 
 /** Process one webhook payload. Never throws; every attempt is logged in instagram_replies. */
@@ -166,7 +170,7 @@ export async function handleWebhook(body: WebhookBody) {
     const store = await db.query.stores.findFirst({ where: eq(stores.id, acct.storeId) });
     if (!store || !store.published) continue;
     const candidates = await db
-      .select({ id: products.id, dmKeyword: products.dmKeyword, title: products.title, slug: products.slug })
+      .select({ id: products.id, dmKeyword: products.dmKeyword, title: products.title, slug: products.slug, dmReplyText: products.dmReplyText })
       .from(products)
       .where(and(eq(products.storeId, store.id), eq(products.status, "published"), isNull(products.deletedAt)));
     const token = await refreshIfNeeded(acct);
@@ -186,7 +190,7 @@ export async function handleWebhook(body: WebhookBody) {
         from: ch.value.from,
         keyword: m.kw,
         send: async () => {
-          await privateReplyToComment(acct.igUserId, token, ch.value.id, replyText(product, store.username));
+          await privateReplyToComment(acct.igUserId, token, ch.value.id, replyText(product, store.username, ch.value.from?.username));
           if (acct.publicReply) await publicReplyToComment(token, ch.value.id, "Sent you a DM!").catch(() => {});
         },
       });
@@ -206,7 +210,7 @@ export async function handleWebhook(body: WebhookBody) {
         sourceId: mid,
         from: { id: ev.sender.id },
         keyword: m.kw,
-        send: () => sendDm(acct.igUserId, token, ev.sender!.id!, replyText(product, store.username)),
+        send: () => sendDm(acct.igUserId, token, ev.sender!.id!, replyText(product, store.username, null)),
       });
     }
   }

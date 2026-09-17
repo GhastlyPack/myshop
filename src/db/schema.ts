@@ -136,6 +136,8 @@ export const products = pgTable(
     fields: jsonb("fields").$type<CustomField[]>().notNull().default([]),
     marketingOptIn: boolean("marketing_opt_in").notNull().default(true), // show the checkbox
     dmKeyword: text("dm_keyword"),
+    /** Custom auto-reply DM. Placeholders: {{link}} {{title}} {{name}}. Null = default text. */
+    dmReplyText: text("dm_reply_text"),
     confirmationSubject: text("confirmation_subject"),
     confirmationBody: text("confirmation_body"),
     status: productStatus("status").notNull().default("draft"),

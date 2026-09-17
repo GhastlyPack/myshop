@@ -4,6 +4,7 @@ import { instagramAccounts, instagramReplies } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LocalTime } from "@/components/local-time";
 import { instagramConfigured } from "@/lib/env";
 import { InstagramControls } from "./instagram-controls";
 
@@ -33,69 +34,77 @@ export async function InstagramSettings({ storeId, error }: { storeId: string; e
     );
   }
   const acct = await db.query.instagramAccounts.findFirst({ where: eq(instagramAccounts.storeId, storeId) });
-  const [stats] = acct
-    ? await db
-        .select({ sent: sql<number>`count(*) filter (where ${instagramReplies.ok})::int`, failed: sql<number>`count(*) filter (where not ${instagramReplies.ok})::int` })
-        .from(instagramReplies)
-        .where(and(eq(instagramReplies.storeId, storeId), sql`${instagramReplies.createdAt} > now() - interval '30 days'`))
-    : [{ sent: 0, failed: 0 }];
-  const recent = acct
-    ? await db.select().from(instagramReplies).where(eq(instagramReplies.storeId, storeId)).orderBy(desc(instagramReplies.createdAt)).limit(5)
-    : [];
+
+  if (!acct) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <InstagramIcon className="size-4" /> Instagram auto-replies
+          </CardTitle>
+          <CardDescription>
+            Connect your Business or Creator account. When someone comments or DMs a product&apos;s keyword, they get the link by DM within seconds.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {error && <p className="text-sm text-destructive">Couldn&apos;t connect: {decodeURIComponent(error)}</p>}
+          <Button asChild>
+            <a href="/api/instagram/connect">Connect Instagram</a>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const [stats] = await db
+    .select({ sent: sql<number>`count(*) filter (where ${instagramReplies.ok})::int`, failed: sql<number>`count(*) filter (where not ${instagramReplies.ok})::int` })
+    .from(instagramReplies)
+    .where(and(eq(instagramReplies.storeId, storeId), sql`${instagramReplies.createdAt} > now() - interval '30 days'`));
+  const recent = await db.select().from(instagramReplies).where(eq(instagramReplies.storeId, storeId)).orderBy(desc(instagramReplies.createdAt)).limit(5);
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <InstagramIcon className="size-4" /> Instagram auto-replies
-            </CardTitle>
-            <CardDescription>
-              {acct
-                ? `Connected as @${acct.username}. When someone comments or DMs a product's keyword, they get the link by DM.`
-                : "Connect your professional Instagram account. When someone comments or DMs a product's keyword, they get the link by DM."}
-            </CardDescription>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <InstagramIcon className="size-4" /> @{acct.username}
+          </CardTitle>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={acct.active ? "default" : "secondary"}>{acct.active ? "Replies on" : "Paused"}</Badge>
+            <Badge variant="secondary">{stats.sent} sent in 30 days</Badge>
+            {stats.failed > 0 && <Badge variant="destructive">{stats.failed} failed</Badge>}
           </div>
-          {acct ? (
-            <InstagramControls connected publicReply={acct.publicReply} active={acct.active} />
-          ) : (
-            <Button asChild>
-              <a href="/api/instagram/connect">Connect Instagram</a>
-            </Button>
-          )}
         </div>
+        <CardDescription>
+          Comment or DM a product&apos;s keyword and the sender gets that product&apos;s auto-reply. Set the keyword and message on each product under Options.
+        </CardDescription>
       </CardHeader>
-      {(error || acct) && (
-        <CardContent className="space-y-3">
-          {error && <p className="text-sm text-destructive">Couldn&apos;t connect: {decodeURIComponent(error)}</p>}
-          {acct && (
-            <>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant={acct.active ? "default" : "secondary"}>{acct.active ? "Replies on" : "Paused"}</Badge>
-                <Badge variant="secondary">{stats.sent} sent · 30d</Badge>
-                {stats.failed > 0 && <Badge variant="destructive">{stats.failed} failed</Badge>}
-                <Badge variant="outline">Token renews {acct.tokenExpiresAt.toLocaleDateString()}</Badge>
-              </div>
-              {recent.length > 0 && (
-                <ul className="divide-y rounded-lg border text-sm">
-                  {recent.map((r) => (
-                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                      <span className="text-muted-foreground">
-                        {r.kind === "comment" ? "Comment" : "DM"} from {r.fromUsername ? `@${r.fromUsername}` : "someone"} · <span className="font-mono uppercase">{r.keyword}</span>
-                      </span>
-                      <span className={r.ok ? "text-muted-foreground" : "text-destructive"}>{r.ok ? "replied" : (r.error ?? "failed").slice(0, 60)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Only products with a DM keyword reply. Set one on each product under Options. Replies work for Business and Creator accounts.
-              </p>
-            </>
-          )}
-        </CardContent>
-      )}
+      <CardContent className="space-y-4">
+        {error && <p className="text-sm text-destructive">Couldn&apos;t connect: {decodeURIComponent(error)}</p>}
+        <InstagramControls publicReply={acct.publicReply} active={acct.active} />
+        {recent.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">Recent replies</div>
+            <ul className="divide-y rounded-lg border text-sm">
+              {recent.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2">
+                  <span className="min-w-0 truncate">
+                    <span className="font-mono text-xs uppercase">{r.keyword}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {r.kind === "comment" ? "comment" : "DM"} from {r.fromUsername ? `@${r.fromUsername}` : "someone"}
+                    </span>
+                  </span>
+                  <span className={`text-xs ${r.ok ? "text-muted-foreground" : "text-destructive"}`}>
+                    {r.ok ? <LocalTime date={r.createdAt} /> : (r.error ?? "failed").slice(0, 60)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Connection renews itself; nothing to do unless you change your Instagram password.</p>
+      </CardContent>
     </Card>
   );
 }

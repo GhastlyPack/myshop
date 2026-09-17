@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "dm_reply_text" text;

@@ -129,6 +129,7 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
         confirmationBody: d.confirmationBody || null,
         listed: d.listed,
         dmKeyword: d.dmKeyword || null,
+        dmReplyText: d.dmReplyText || null,
         quantityLimit: d.quantityLimit,
         bumpProductId,
         bumpHeadline: bumpProductId ? d.bumpHeadline || null : null,

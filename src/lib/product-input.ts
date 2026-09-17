@@ -34,6 +34,7 @@ export const productInputSchema = z.object({
   confirmationBody: z.string().max(10000),
   listed: z.boolean(),
   dmKeyword: z.string().trim().max(40, "Keep the keyword under 40 characters."),
+  dmReplyText: z.string().trim().max(600, "Keep the reply under 600 characters."),
   /** Limited quantity; null = unlimited. */
   quantityLimit: z.number().int().min(1, "Limit must be at least 1.").max(1_000_000).nullable(),
   /** Order bump: another paid product from the same store. */

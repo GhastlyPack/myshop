@@ -51,6 +51,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
         confirmationBody: product.confirmationBody ?? "",
         listed: product.listed,
         dmKeyword: product.dmKeyword ?? "",
+        dmReplyText: product.dmReplyText ?? "",
         quantityLimit: product.quantityLimit,
         bumpProductId: product.bumpProductId,
         bumpHeadline: product.bumpHeadline ?? "",

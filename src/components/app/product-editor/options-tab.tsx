@@ -10,6 +10,7 @@ import { Field, FieldHint } from "@/components/app/product-editor/field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
@@ -47,6 +48,20 @@ export function OptionsTab({ form, update, errors, productId, username, slug }: 
         <Field label="Keyword" htmlFor="dmKeyword" error={errors.dmKeyword}>
           <Input id="dmKeyword" value={form.dmKeyword} onChange={(e) => update({ dmKeyword: e.target.value.toUpperCase() })} maxLength={40} placeholder="GUIDE" className="max-w-xs uppercase" />
           <FieldHint>Short and easy to type. One word works best.</FieldHint>
+        </Field>
+        <Field label="Auto-reply message" htmlFor="dmReplyText" error={errors.dmReplyText}>
+          <Textarea
+            id="dmReplyText"
+            value={form.dmReplyText}
+            onChange={(e) => update({ dmReplyText: e.target.value })}
+            rows={3}
+            maxLength={600}
+            placeholder={`Here's ${form.title || "your download"}: {{link}}`}
+          />
+          <FieldHint>
+            Sent as a DM when someone comments or messages the keyword. Use <span className="font-mono">{"{{link}}"}</span>,{" "}
+            <span className="font-mono">{"{{title}}"}</span> and <span className="font-mono">{"{{name}}"}</span> (their username). Leave empty for the default.
+          </FieldHint>
         </Field>
         <DmKeywordHelper username={username} slug={slug} keyword={form.dmKeyword || null} title={form.title || "Untitled product"} />
       </section>
