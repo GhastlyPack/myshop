@@ -18,8 +18,13 @@ createdb myshop && cp .env.example .env.local && pnpm install && pnpm db:migrate
 ```
 Sign in at `/dev/login` (any email; `ADMIN_EMAILS` gets `/admin`). Emails at `/dev/outbox`. Files in `.data/`.
 
-## Step 5 — Vercel (blocked on keys)
-The Vercel CLI is logged in (`cole-1857`). To deploy:
+## Step 5 — Vercel (in progress, 2026-09-17)
+Done: project `vagents/myshop` created and linked, GitHub repo connected (push to `main` deploys production), first production build green, `visitmy.shop` added to the project and verified, `SESSION_SECRET` / `ADMIN_EMAILS` / `AWS_REGION` / `PAYPAL_ENV` / `EMAIL_FROM` set on Production + Preview, `APP_BASE_URL=https://visitmy.shop` on Production (previews derive it from `VERCEL_URL`).
+
+Still needed:
+- **DNS**: at GoDaddy add `A @ 76.76.21.21` (and `CNAME www cname.vercel-dns.com`), or switch nameservers to `ns1/ns2.vercel-dns.com`.
+- **Deployment Protection → Off** (Vercel → myshop → Settings → Deployment Protection). It is currently on, so every URL redirects to Vercel SSO and buyers would be locked out.
+- The keys below (paste into Vercel → Settings → Environment Variables; empty values are now ignored by the app):
 1. **Supabase** project → `DATABASE_URL` (pooler, 6543) + `DATABASE_DIRECT_URL` (5432). Run `pnpm db:migrate` against it.
 2. **Auth0** Regular Web App → `AUTH0_DOMAIN/CLIENT_ID/CLIENT_SECRET/SECRET`; callback `https://visitmy.shop/auth/callback`, logout `https://visitmy.shop`. Enable Google.
 3. **AWS S3**: private `visitmyshop-files`, public `visitmyshop-public` (+ CORS allowing PUT from the app origin), IAM user → `AWS_ACCESS_KEY_ID/SECRET`, `S3_PUBLIC_BASE_URL`.
