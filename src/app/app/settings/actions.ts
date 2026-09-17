@@ -18,6 +18,7 @@ const url = z.union([z.literal(""), z.string().trim().url("Enter a full URL, inc
 const profileSchema = z.object({
   displayName: z.string().trim().min(1, "Add a display name.").max(80, "Keep it under 80 characters."),
   bio: z.string().trim().max(300, "Keep your bio under 300 characters."),
+  about: z.string().trim().max(4000, "Keep the about section under 4,000 characters."),
   avatarKey: z.string().nullable(),
   currency: z.enum(CURRENCIES),
   socials: z.object({
@@ -57,7 +58,7 @@ export async function updateProfile(input: ProfileInput): Promise<ProfileResult>
 
   await db
     .update(stores)
-    .set({ displayName: d.displayName, bio: d.bio || null, avatarKey: d.avatarKey, currency: d.currency, socials })
+    .set({ displayName: d.displayName, bio: d.bio || null, about: d.about || null, avatarKey: d.avatarKey, currency: d.currency, socials })
     .where(eq(stores.id, store.id));
   if (d.currency !== store.currency) {
     await db.update(products).set({ currency: d.currency }).where(eq(products.storeId, store.id));

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Toaster } from "@/components/ui/sonner";
@@ -11,7 +11,11 @@ export const metadata: Metadata = {
   title: { default: "visitmy.shop", template: "%s · visitmy.shop" },
   description: "Sell digital products straight from your Instagram bio.",
   metadataBase: new URL(env.APP_BASE_URL),
+  applicationName: "visitmy.shop",
+  verification: env.GOOGLE_SITE_VERIFICATION ? { google: env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
+
+export const viewport: Viewport = { themeColor: "#f4611e" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -79,6 +79,10 @@ export function SettingsForm({ initial, avatarUrl, username }: { initial: Profil
           <Textarea id="bio" value={form.bio} onChange={(e) => update({ bio: e.target.value })} maxLength={300} rows={3} />
           <FieldHint>{form.bio.length}/300</FieldHint>
         </Field>
+        <Field label="About" htmlFor="about" error={errors.about}>
+          <Textarea id="about" value={form.about ?? ""} onChange={(e) => update({ about: e.target.value })} maxLength={4000} rows={8} placeholder="Who you are, who your products are for, what people get. Markdown works." />
+          <FieldHint>Shown under your products. Search engines read this, so say what you actually do.</FieldHint>
+        </Field>
         <Field label="Store currency" error={errors.currency}>
           <Select value={form.currency} onValueChange={(v) => update({ currency: v as ProfileInput["currency"] })}>
             <SelectTrigger className="w-full sm:w-72">

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, orders, productFiles, products, stores, users } from "@/db/schema";
 import { withDeadline } from "@/lib/watchdog";
@@ -7,29 +7,42 @@ import { withDeadline } from "@/lib/watchdog";
 const int = (expr: ReturnType<typeof sql>) => sql<number>`(${expr})::int`;
 
 export async function getAdminOverview() {
-  const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
   const t0 = Date.now();
   const timed = <T,>(label: string, p: Promise<T>) => withDeadline(`admin.${label}`, p).then((r) => { console.log(`[admin] ${label} ${Date.now() - t0}ms`); return r; });
-  const [[u], [s], [p], [o], [f], [e], recentSignups, topStores] = await Promise.all([
-    timed("users", db.select({ n: int(sql`count(*)`) }).from(users)),
-    timed("stores", db.select({ n: int(sql`count(*)`), published: int(sql`count(*) filter (where ${stores.published})`) }).from(stores)),
-    timed("products", db.select({ n: int(sql`count(*) filter (where ${products.deletedAt} is null)`), published: int(sql`count(*) filter (where ${products.status} = 'published' and ${products.deletedAt} is null)`) }).from(products)),
-    timed("orders", db
-      .select({ n: int(sql`count(*)`), revenueCents: int(sql`coalesce(sum(${orders.amountCents}), 0)`) })
-      .from(orders)
-      .where(eq(orders.status, "paid"))),
-    timed("files", db.select({ bytes: sql<number>`coalesce(sum(${productFiles.bytes}), 0)::bigint`, n: int(sql`count(*)`) }).from(productFiles)),
-    timed("events", db
-      .select({ n: int(sql`count(*)`) })
-      .from(events)
-      .where(gte(events.createdAt, dayAgo))),
-    timed("signups", db
+
+  // Sequential, and all counts in one round trip via scalar subqueries. Fewer, unpipelined
+  // queries are gentler on the Supabase transaction pooler (see the pool note in db/index.ts).
+  const [counts] = await timed(
+    "counts",
+    db.execute(sql`
+      select
+        (select count(*) from ${users})::int as users,
+        (select count(*) from ${stores})::int as stores,
+        (select count(*) filter (where ${stores.published}) from ${stores})::int as stores_published,
+        (select count(*) filter (where ${products.deletedAt} is null) from ${products})::int as products,
+        (select count(*) filter (where ${products.status} = 'published' and ${products.deletedAt} is null) from ${products})::int as products_published,
+        (select count(*) from ${orders} where ${orders.status} = 'paid')::int as paid_orders,
+        (select coalesce(sum(${orders.amountCents}), 0) from ${orders} where ${orders.status} = 'paid')::int as revenue_cents,
+        (select coalesce(sum(${productFiles.bytes}), 0) from ${productFiles})::bigint as storage_bytes,
+        (select count(*) from ${productFiles})::int as files,
+        (select count(*) from ${events} where ${events.createdAt} > now() - interval '24 hours')::int as events_24h
+    `),
+  );
+  const c = counts as Record<string, number | string>;
+
+  const recentSignups = await timed(
+    "signups",
+    db
       .select({ id: users.id, email: users.email, name: users.name, role: users.role, createdAt: users.createdAt, username: stores.username })
       .from(users)
       .leftJoin(stores, eq(stores.userId, users.id))
       .orderBy(desc(users.createdAt))
-      .limit(10)),
-    timed("topStores", db
+      .limit(10),
+  );
+
+  const topStores = await timed(
+    "topStores",
+    db
       .select({
         id: stores.id,
         username: stores.username,
@@ -41,20 +54,20 @@ export async function getAdminOverview() {
       .innerJoin(orders, and(eq(orders.storeId, stores.id), eq(orders.status, "paid")))
       .groupBy(stores.id, stores.username, stores.displayName)
       .orderBy(desc(sql`count(${orders.id})`), desc(sql`sum(${orders.amountCents})`))
-      .limit(10)),
-  ]);
+      .limit(10),
+  );
 
   return {
-    users: u?.n ?? 0,
-    stores: s?.n ?? 0,
-    storesPublished: s?.published ?? 0,
-    products: p?.n ?? 0,
-    productsPublished: p?.published ?? 0,
-    paidOrders: o?.n ?? 0,
-    revenueCents: o?.revenueCents ?? 0,
-    storageBytes: Number(f?.bytes ?? 0),
-    files: f?.n ?? 0,
-    events24h: e?.n ?? 0,
+    users: Number(c.users ?? 0),
+    stores: Number(c.stores ?? 0),
+    storesPublished: Number(c.stores_published ?? 0),
+    products: Number(c.products ?? 0),
+    productsPublished: Number(c.products_published ?? 0),
+    paidOrders: Number(c.paid_orders ?? 0),
+    revenueCents: Number(c.revenue_cents ?? 0),
+    storageBytes: Number(c.storage_bytes ?? 0),
+    files: Number(c.files ?? 0),
+    events24h: Number(c.events_24h ?? 0),
     recentSignups,
     topStores,
   };

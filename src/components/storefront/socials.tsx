@@ -104,6 +104,11 @@ function hrefFor(key: keyof SocialLinks, value: string) {
   }
 }
 
+/** Public profile URLs (no mailto), for schema.org sameAs. */
+export function socialHrefs(socials: SocialLinks): string[] {
+  return ORDER.map((k) => (socials[k] ? hrefFor(k, socials[k]!) : null)).filter((h): h is string => Boolean(h) && !h!.startsWith("mailto:"));
+}
+
 export function Socials({ socials }: { socials: SocialLinks }) {
   const items = ORDER.map((k) => ({ k, href: socials[k] ? hrefFor(k, socials[k]!) : null })).filter((i) => i.href);
   if (items.length === 0) return null;
@@ -113,7 +118,7 @@ export function Socials({ socials }: { socials: SocialLinks }) {
         const Icon = ICON[k];
         return (
           <li key={k}>
-            <a href={href!} target={k === "email" ? undefined : "_blank"} rel="noreferrer" className="sf-social" aria-label={LABEL[k]} title={LABEL[k]}>
+            <a href={href!} target={k === "email" ? undefined : "_blank"} rel="me noopener" className="sf-social" aria-label={LABEL[k]} title={LABEL[k]}>
               <Icon />
             </a>
           </li>

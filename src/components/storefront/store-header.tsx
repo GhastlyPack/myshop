@@ -10,7 +10,7 @@ function Avatar({ store, theme, size }: { store: Store; theme: ResolvedTheme; si
   const initial = store.displayName.trim().charAt(0).toUpperCase() || "•";
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element -- creator-uploaded asset, sized by CSS
-    return <img src={src} alt="" className="sf-avatar" data-shape={theme.avatarShape} data-size={size} />;
+    return <img src={src} alt={store.displayName} fetchPriority="high" decoding="async" className="sf-avatar" data-shape={theme.avatarShape} data-size={size} />;
   }
   return (
     <div className="sf-avatar sf-heading grid place-content-center text-3xl" data-shape={theme.avatarShape} data-size={size} aria-hidden>

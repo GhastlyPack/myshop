@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Markdown from "react-markdown";
 import { ArrowUpRight } from "lucide-react";
 import { CheckoutForm, type BumpOffer } from "@/components/storefront/checkout-form";
@@ -8,11 +8,15 @@ import { resolveStoreTheme } from "@/components/storefront/preview-theme";
 import { formatPrice } from "@/components/storefront/price";
 import { Stars } from "@/components/storefront/stars";
 import { CompactStoreHeader } from "@/components/storefront/store-header";
+import { ProductCard, type CardProduct } from "@/components/storefront/product-card";
+import { JsonLd } from "@/components/seo/json-ld";
+import { absoluteUrl } from "@/lib/site";
+import type { Product } from "@/db/schema";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { TrackView } from "@/components/storefront/track-view";
 import { PixelEvent } from "@/components/storefront/pixel-event";
 import { bumpPrice, defaultBumpHeadline, isSoldOut, LOW_STOCK_AT, remainingUnits } from "@/lib/commerce";
-import { getPublicProduct } from "@/lib/queries";
+import { findProductByPreviousSlug, getPublicProduct, getPublicStoreTagged } from "@/lib/queries";
 import { publicUrl } from "@/lib/storage";
 
 type Props = { params: Promise<{ username: string; slug: string }>; searchParams: Promise<{ lp?: string; previewTheme?: string | string[] }> };
@@ -27,7 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: { absolute: title },
     description,
-    openGraph: { title, description },
+    alternates: { canonical: `/${store.username}/${product.slug}` },
+    openGraph: { title, description, url: `/${store.username}/${product.slug}` },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -35,8 +40,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params, searchParams }: Props) {
   const [{ username, slug }, sp] = await Promise.all([params, searchParams]);
   const data = await getPublicProduct(username, slug);
-  if (!data) notFound();
+  if (!data) {
+    // Renamed slug? Old links in bios and captions keep working.
+    const moved = await findProductByPreviousSlug(username, slug);
+    if (moved) permanentRedirect(`/${username.toLowerCase()}/${moved.slug}`);
+    notFound();
+  }
   const { store, product, files, links, reviews, bump } = data;
+  const siblings = (await getPublicStoreTagged(username))?.products.filter((p) => p.id !== product.id).slice(0, 4) ?? [];
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);
   const remaining = remainingUnits(product);
   const soldOut = isSoldOut(product);
@@ -56,9 +67,65 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const thumb = publicUrl(product.thumbnailKey);
   const avg = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : 0;
   const isLink = product.type === "link";
+  const pageUrl = absoluteUrl(`/${store.username}/${product.slug}`);
+  const abs = (u: string | null) => (u ? (u.startsWith("http") ? u : absoluteUrl(u)) : undefined);
+  const productLd: Record<string, unknown> = isLink
+    ? { "@context": "https://schema.org", "@type": "WebPage", name: product.title, description: product.subtitle ?? undefined, url: pageUrl }
+    : {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: product.title,
+        description: product.subtitle ?? product.description?.slice(0, 300) ?? undefined,
+        image: [abs(banner), abs(thumb)].filter(Boolean),
+        url: pageUrl,
+        brand: { "@type": "Person", name: store.displayName },
+        offers: {
+          "@type": "Offer",
+          url: pageUrl,
+          price: (product.priceCents / 100).toFixed(2),
+          priceCurrency: product.currency.toUpperCase(),
+          availability: soldOut ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+          seller: { "@type": "Person", name: store.displayName },
+        },
+        ...(reviews.length
+          ? {
+              aggregateRating: { "@type": "AggregateRating", ratingValue: avg.toFixed(1), reviewCount: reviews.length, bestRating: 5, worstRating: 1 },
+              review: reviews.slice(0, 5).map((r) => ({
+                "@type": "Review",
+                reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
+                author: { "@type": "Person", name: r.reviewerName ?? "Verified buyer" },
+                reviewBody: r.quote ?? undefined,
+              })),
+            }
+          : {}),
+      };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: store.displayName, item: absoluteUrl(`/${store.username}`) },
+      { "@type": "ListItem", position: 2, name: product.title, item: pageUrl },
+    ],
+  };
+  const toCard = (p: Product): CardProduct => ({
+    id: p.id,
+    storeId: store.id,
+    title: p.title,
+    subtitle: p.subtitle,
+    priceCents: p.priceCents,
+    currency: p.currency,
+    buttonText: p.buttonText,
+    cardStyle: p.cardStyle === "preview" ? "callout" : p.cardStyle,
+    thumbUrl: publicUrl(p.thumbnailKey),
+    bannerUrl: null,
+    href: `/${store.username}/${p.slug}`,
+    external: false,
+  });
 
   return (
     <ThemeRoot theme={theme}>
+      <JsonLd data={productLd} />
+      <JsonLd data={breadcrumbLd} />
       {!isPreview && <TrackView storeId={store.id} productId={product.id} type="product_view" />}
       {!isPreview && (
         <PixelEvent
@@ -73,12 +140,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
           {banner ? (
             <div className="sf-thumb aspect-[16/9] w-full" style={{ borderRadius: "var(--sf-card-radius)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- creator upload */}
-              <img src={banner} alt="" />
+              <img src={banner} alt={product.title} fetchPriority="high" decoding="async" />
             </div>
           ) : thumb ? (
             <div className="sf-thumb aspect-square w-32 sm:w-40" style={{ borderRadius: "var(--sf-card-radius)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- creator upload */}
-              <img src={thumb} alt="" />
+              <img src={thumb} alt={product.title} fetchPriority="high" decoding="async" />
             </div>
           ) : null}
 
@@ -170,6 +237,17 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {siblings.length > 0 && !landing && (
+          <section className="sf-rise mt-12" style={{ animationDelay: "220ms" }}>
+            <h2 className="sf-heading mb-4 text-[1.2rem]">More from {store.displayName}</h2>
+            <div className="flex flex-col gap-4">
+              {siblings.map((p) => (
+                <ProductCard key={p.id} product={toCard(p)} mode="list" />
+              ))}
+            </div>
           </section>
         )}
 

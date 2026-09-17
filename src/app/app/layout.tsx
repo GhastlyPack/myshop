@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import { AppNav, MobileNav } from "@/components/app/nav";
 import { getCurrentStore, logoutPath, requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();

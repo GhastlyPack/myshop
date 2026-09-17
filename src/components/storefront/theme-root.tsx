@@ -11,6 +11,8 @@ export function ThemeRoot({ theme, children }: { theme: ResolvedTheme; children:
   const bg = publicUrl(theme.bgImageKey);
   return (
     <>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="stylesheet" href={googleFontsHref(theme)} />
       <div className="sf-root" style={vars} data-layout={theme.layout}>
         {bg && <div className="sf-bg-image" style={{ backgroundImage: `url("${bg}")` }} aria-hidden />}

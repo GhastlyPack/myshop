@@ -6,6 +6,10 @@ import { StoreFooter } from "@/components/storefront/footer";
 import { resolveStoreTheme } from "@/components/storefront/preview-theme";
 import { ProductCard, type CardProduct } from "@/components/storefront/product-card";
 import { StoreHeader } from "@/components/storefront/store-header";
+import { socialHrefs } from "@/components/storefront/socials";
+import { JsonLd } from "@/components/seo/json-ld";
+import { absoluteUrl } from "@/lib/site";
+import Markdown from "react-markdown";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { TrackView } from "@/components/storefront/track-view";
 import { getPublicStoreTagged, storeTag } from "@/lib/queries";
@@ -24,7 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: { absolute: `${store.displayName} (@${store.username})` },
     description: store.bio ?? `${store.displayName} on visitmy.shop`,
-    openGraph: { title: `${store.displayName} (@${store.username})`, description: store.bio ?? undefined, type: "profile" },
+    alternates: { canonical: `/${store.username}` },
+    openGraph: { title: `${store.displayName} (@${store.username})`, description: store.bio ?? undefined, type: "profile", url: `/${store.username}` },
     twitter: { card: "summary_large_image", title: `${store.displayName} (@${store.username})`, description: store.bio ?? undefined },
   };
 }
@@ -87,9 +92,26 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
     if (groups[0].products.length === 0) groups.shift();
   }
   const mode = theme.layout === "grid" ? "grid" : "list";
+  const avatar = publicUrl(store.avatarKey);
+  const profileLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url: absoluteUrl(`/${store.username}`),
+    mainEntity: {
+      "@type": "Person",
+      name: store.displayName,
+      alternateName: `@${store.username}`,
+      description: store.bio ?? undefined,
+      image: avatar ? absoluteUrl(avatar.startsWith("http") ? avatar.replace(/^https?:\/\/[^/]+/, "") : avatar) : undefined,
+      url: absoluteUrl(`/${store.username}`),
+      sameAs: socialHrefs(store.socials),
+    },
+  };
+  if (avatar?.startsWith("http")) profileLd.mainEntity.image = avatar;
 
   return (
     <ThemeRoot theme={theme}>
+      <JsonLd data={profileLd} />
       {!isPreview && <TrackView storeId={store.id} type="view" />}
       <main className="mx-auto w-full max-w-[600px] px-4 pt-12 pb-6 sm:px-6 sm:pt-16">
         <StoreHeader store={store} theme={theme} />
@@ -108,6 +130,15 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
           ))}
           {products.length === 0 && <p className="sf-muted text-center text-sm">Nothing here yet. Check back soon.</p>}
         </div>
+
+        {store.about && (
+          <section className="sf-rise mt-14" style={{ animationDelay: "160ms" }}>
+            <h2 className="sf-heading sf-muted mb-4 text-center text-[0.8rem] font-semibold tracking-[0.18em] uppercase">About {store.displayName}</h2>
+            <div className="sf-surface sf-prose p-5 sm:p-7">
+              <Markdown>{store.about}</Markdown>
+            </div>
+          </section>
+        )}
 
         <StoreFooter show={theme.showBranding} />
       </main>

@@ -50,6 +50,13 @@
       "when": 1789676145015,
       "tag": "0006_cooing_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789681814553,
+      "tag": "0007_flat_lady_ursula",
+      "breakpoints": true
     }
   ]
 }

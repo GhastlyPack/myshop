@@ -20,7 +20,11 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 function makeClient(): Client {
   return postgres(env.DATABASE_URL, {
-    max: env.NODE_ENV === "production" ? 1 : 10,
+    // >1 so concurrent queries (Promise.all) each take their own pooled connection.
+    // With max:1, postgres-js pipelines them onto one socket, which the Supabase
+    // transaction pooler can't do — it deadlocks. Supavisor multiplexes many client
+    // connections onto few DB ones, so a few per instance is exactly its design.
+    max: env.NODE_ENV === "production" ? 3 : 10,
     prepare: false, // required for Supabase transaction pooler (port 6543)
     idle_timeout: env.NODE_ENV === "production" ? 10 : 20,
     max_lifetime: 60 * 5,

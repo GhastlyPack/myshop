@@ -227,3 +227,87 @@
     font-weight: 500;
   }
 }
+
+/* ---------- long-form marketing prose ---------- */
+@layer components {
+  .ld-prose {
+    font-size: 1.05rem;
+    line-height: 1.7;
+  }
+  .ld-prose > * + * {
+    margin-top: 1.1em;
+  }
+  .ld-prose h2 {
+    font-family: var(--font-manrope), var(--font-inter), system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-size: 1.75rem;
+    line-height: 1.15;
+    margin-top: 2.4em;
+  }
+  .ld-prose h3 {
+    font-weight: 600;
+    font-size: 1.2rem;
+    margin-top: 1.8em;
+  }
+  .ld-prose p,
+  .ld-prose li {
+    color: #27272a;
+  }
+  .ld-prose ul,
+  .ld-prose ol {
+    padding-left: 1.4em;
+  }
+  .ld-prose ul {
+    list-style: disc;
+  }
+  .ld-prose ol {
+    list-style: decimal;
+  }
+  .ld-prose li + li {
+    margin-top: 0.4em;
+  }
+  .ld-prose a {
+    color: var(--ld-orange-deep);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .ld-prose strong {
+    font-weight: 600;
+    color: var(--ld-ink);
+  }
+  .ld-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .ld-prose th,
+  .ld-prose td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.8rem 0.6rem;
+    border-top: 1px solid var(--ld-line);
+  }
+  .ld-prose thead th {
+    border-top: 0;
+    font-weight: 600;
+  }
+  .ld-prose td:first-child {
+    font-weight: 500;
+    color: var(--ld-ink);
+  }
+  .ld-prose .ld-callout {
+    background: #fff;
+    border: 1px solid var(--ld-line);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+  }
+  .ld-prose dl dt {
+    font-weight: 600;
+    color: var(--ld-ink);
+    margin-top: 1.4em;
+  }
+  .ld-prose dl dd {
+    margin-top: 0.4em;
+  }
+}

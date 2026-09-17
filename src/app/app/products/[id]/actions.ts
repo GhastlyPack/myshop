@@ -51,6 +51,7 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
     columns: { id: true },
   });
   if (clash) errors.slug = "Another product already uses this slug.";
+  const previousSlugs = slug !== product.slug ? [...product.previousSlugs.filter((s) => s !== slug), product.slug].slice(-10) : product.previousSlugs;
 
   // Section must be ours.
   let sectionId: string | null = null;
@@ -114,6 +115,7 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
         title,
         subtitle: d.subtitle || null,
         slug,
+        previousSlugs,
         description: d.description || null,
         type: d.type,
         priceCents: d.priceCents,

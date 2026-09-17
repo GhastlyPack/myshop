@@ -80,7 +80,7 @@ export function ProductCard({ product: p, mode = "list" }: { product: CardProduc
           {p.thumbUrl && (
             <span className="sf-thumb sf-thumb-sm">
               {/* eslint-disable-next-line @next/next/no-img-element -- creator upload */}
-              <img src={p.thumbUrl} alt="" loading="lazy" />
+              <img src={p.thumbUrl} alt={p.title} loading="lazy" decoding="async" />
             </span>
           )}
           <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -107,7 +107,7 @@ export function ProductCard({ product: p, mode = "list" }: { product: CardProduc
       {image && (
         <span className={`sf-thumb block ${grid ? "aspect-square" : hero ? "aspect-[4/3] sm:aspect-[16/9]" : "aspect-[16/9]"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- creator upload */}
-          <img src={image} alt="" loading={hero ? "eager" : "lazy"} />
+          <img src={image} alt={p.title} loading={hero ? "eager" : "lazy"} fetchPriority={hero ? "high" : "auto"} decoding="async" />
         </span>
       )}
       <span className={`flex flex-col ${grid ? "gap-1.5 p-3.5" : "gap-2 p-5 sm:p-6"}`}>

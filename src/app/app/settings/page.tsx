@@ -31,6 +31,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         initial={{
           displayName: store.displayName,
           bio: store.bio ?? "",
+          about: store.about ?? "",
           avatarKey: store.avatarKey,
           currency: (CURRENCIES as readonly string[]).includes(store.currency) ? (store.currency as (typeof CURRENCIES)[number]) : "usd",
           socials: {

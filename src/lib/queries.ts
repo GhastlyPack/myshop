@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { productFiles, productLinks, products, reviews, sections, stores } from "@/db/schema";
@@ -90,4 +90,14 @@ export async function getStoreEditorData(storeId: string) {
       .where(eq(products.storeId, storeId)),
   ]);
   return { sections: secs, products: prods, files };
+}
+
+/** A product whose slug was renamed: old slugs are kept on the row so links in old posts still resolve. Uncached, only hit on a miss. */
+export async function findProductByPreviousSlug(username: string, slug: string) {
+  const store = await db.query.stores.findFirst({ where: and(eq(stores.username, username.toLowerCase()), eq(stores.published, true)), columns: { id: true } });
+  if (!store) return null;
+  return db.query.products.findFirst({
+    where: and(eq(products.storeId, store.id), eq(products.status, "published"), isNull(products.deletedAt), sql`${products.previousSlugs} @> ARRAY[${slug.toLowerCase()}]::text[]`),
+    columns: { slug: true },
+  });
 }

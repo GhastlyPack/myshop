@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 
-export const metadata: Metadata = { title: { default: "Admin", template: "%s · admin · visitmy.shop" } };
+export const metadata: Metadata = { title: { default: "Admin", template: "%s · admin · visitmy.shop" }, robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 /** /admin lives outside the /app shell: minimal header, back link, read-only pages. Every page also calls requireAdmin(). */

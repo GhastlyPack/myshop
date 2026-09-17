@@ -8,6 +8,8 @@ export function StoreFooter({ show }: { show: boolean }) {
     <footer className="sf-muted pt-14 pb-8 text-center text-xs">
       <Link
         href="/"
+        aria-label="visitmy.shop home"
+        title="Sell digital products from your bio with visitmy.shop"
         className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 transition-opacity hover:opacity-70"
         style={{ borderColor: "color-mix(in srgb, var(--sf-text) 14%, transparent)", background: "color-mix(in srgb, var(--sf-surface) 70%, transparent)" }}
       >

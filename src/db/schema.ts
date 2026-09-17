@@ -86,6 +86,7 @@ export const stores = pgTable(
     username: text("username").notNull(), // stored lowercase
     displayName: text("display_name").notNull(),
     bio: text("bio"),
+    about: text("about"), // longer markdown block shown under the products
     avatarKey: text("avatar_key"),
     socials: jsonb("socials").$type<SocialLinks>().notNull().default({}),
     theme: jsonb("theme").$type<Theme>().notNull().default(sql`'{}'::jsonb`),
@@ -122,6 +123,7 @@ export const products = pgTable(
       .references(() => stores.id, { onDelete: "cascade" }),
     sectionId: text("section_id").references(() => sections.id, { onDelete: "set null" }),
     slug: text("slug").notNull(),
+    previousSlugs: text("previous_slugs").array().notNull().default(sql`'{}'::text[]`), // old slugs 301 to the current one
     type: productType("type").notNull().default("download"),
     title: text("title").notNull(),
     subtitle: text("subtitle"),
