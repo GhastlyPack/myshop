@@ -141,7 +141,7 @@ export default async function Home() {
           <div className="mt-12">
             <ThemeCards />
           </div>
-          <Link href="/demo" className="ld-btn ld-btn-ghost mt-10">
+          <Link href="/cole" className="ld-btn ld-btn-ghost mt-10">
             See a live store
           </Link>
         </div>
