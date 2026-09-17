@@ -8,7 +8,7 @@ export const SITE = {
   description: "Sell digital products straight from your Instagram bio. Upload a file, drop one link, get paid to your own Stripe, delivered in seconds.",
   email: "hello@visitmy.shop",
   /** Official profiles, used as schema.org sameAs. Fill in as they are claimed. */
-  profiles: [] as string[],
+  profiles: ["https://www.instagram.com/visitmy.shop"] as string[],
 };
 
 export const absoluteUrl = (path: string) => `${SITE.url}${path.startsWith("/") ? path : `/${path}`}`;
