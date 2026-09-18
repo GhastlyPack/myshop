@@ -198,8 +198,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
 
           {!isLink && files.length > 0 && (
             <p className="sf-muted mt-6 text-sm">
-              Includes {files.length} {files.length === 1 ? "file" : "files"}
-              {links.length > 0 ? ` and ${links.length} ${links.length === 1 ? "link" : "links"}` : ""}. Delivered instantly by email.
+              {product.type === "booking"
+                ? `Includes ${files.length} pre-call ${files.length === 1 ? "document" : "documents"}${links.length > 0 ? ` and ${links.length} ${links.length === 1 ? "link" : "links"}` : ""}, sent with your booking confirmation.`
+                : `Includes ${files.length} ${files.length === 1 ? "file" : "files"}${links.length > 0 ? ` and ${links.length} ${links.length === 1 ? "link" : "links"}` : ""}. Delivered instantly by email.`}
             </p>
           )}
         </article>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { bookCall } from "@/app/[username]/[slug]/booking-actions";
 import { utcToZonedParts } from "@/lib/timezone";
@@ -20,6 +21,14 @@ function money(cents: number, currency: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase(), maximumFractionDigits: cents % 100 === 0 ? 0 : 2 }).format(cents / 100);
 }
 
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const dayKey = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+/**
+ * Standard month-grid calendar (the Calendly/Cal.com pattern): pick a day with open
+ * times, then a time. Everything is shown in the buyer's own timezone.
+ */
 export function BookingPicker({ username, slug, slotsIso, priceCents, currency, durationMinutes, marketingOptIn, buttonText }: Props) {
   const tz = useMemo(() => {
     try {
@@ -29,44 +38,81 @@ export function BookingPicker({ username, slug, slotsIso, priceCents, currency, 
     }
   }, []);
 
-  // Group slots by the buyer's local date.
-  const days = useMemo(() => {
-    const map = new Map<string, { label: string; slots: { iso: string; time: string }[] }>();
-    const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric" });
+  // Slots bucketed by the buyer's local calendar day.
+  const byDay = useMemo(() => {
+    const map = new Map<string, { iso: string; time: string }[]>();
     const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
     for (const iso of slotsIso) {
       const d = new Date(iso);
       const p = utcToZonedParts(d, tz);
-      const key = `${p.year}-${p.month}-${p.day}`;
-      if (!map.has(key)) map.set(key, { label: dateFmt.format(d), slots: [] });
-      map.get(key)!.slots.push({ iso, time: timeFmt.format(d) });
+      const key = dayKey(p.year, p.month, p.day);
+      (map.get(key) ?? map.set(key, []).get(key)!).push({ iso, time: timeFmt.format(d) });
     }
-    return [...map.values()];
+    return map;
   }, [slotsIso, tz]);
 
-  const [dayIdx, setDayIdx] = useState(0);
+  const availableKeys = useMemo(() => [...byDay.keys()].sort(), [byDay]);
+  const today = utcToZonedParts(new Date(), tz);
+  const todayKey = dayKey(today.year, today.month, today.day);
+
+  // Month bounds: from the first available day's month to the last's.
+  const first = availableKeys[0];
+  const last = availableKeys[availableKeys.length - 1];
+  const parseKey = (k: string) => k.split("-").map(Number) as [number, number, number];
+  const [fy, fm] = first ? parseKey(first) : [today.year, today.month, 1];
+  const [ly, lm] = last ? parseKey(last) : [today.year, today.month, 1];
+
+  const [view, setView] = useState<{ y: number; m: number }>({ y: fy, m: fm });
+  const [selectedDay, setSelectedDay] = useState<string | null>(first ?? null);
   const [selected, setSelected] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [optIn, setOptIn] = useState(true);
   const [pending, start] = useTransition();
 
-  if (days.length === 0) {
+  if (availableKeys.length === 0) {
     return <p className="sf-muted text-center text-[0.95rem]">No open times right now. Check back soon.</p>;
   }
 
-  const day = days[Math.min(dayIdx, days.length - 1)];
+  const canPrev = view.y > fy || (view.y === fy && view.m > fm);
+  const canNext = view.y < ly || (view.y === ly && view.m < lm);
+  const shiftMonth = (delta: number) => {
+    let m = view.m + delta;
+    let y = view.y;
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    } else if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+    setView({ y, m });
+  };
+
+  // Grid for the viewed month. Weekday of a civil date is timezone-independent, so UTC math is exact here.
+  const daysInMonth = new Date(Date.UTC(view.y, view.m, 0)).getUTCDate();
+  const leadingBlanks = new Date(Date.UTC(view.y, view.m - 1, 1)).getUTCDay();
+  const cells: (number | null)[] = [...Array<null>(leadingBlanks).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+
+  const daySlots = selectedDay ? (byDay.get(selectedDay) ?? []) : [];
   const tzLabel = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? tz;
+  const selectedLabel = selectedDay
+    ? (() => {
+        const [y, m, d] = parseKey(selectedDay);
+        return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, d)));
+      })()
+    : "";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!selected) return;
     start(async () => {
       const res = await bookCall({ username, slug, name, email, slot: selected, timezone: tz, marketingOptIn: optIn, pageUrl: typeof window !== "undefined" ? window.location.href : undefined });
-      // On success the action redirects; only an error comes back.
       if (res && !res.ok) toast.error(res.error);
     });
   }
+
+  const inputCls = "w-full rounded-lg border bg-transparent px-3 py-2.5 text-[0.95rem] outline-none focus:border-foreground/50";
 
   return (
     <div className="space-y-5">
@@ -77,55 +123,76 @@ export function BookingPicker({ username, slug, slotsIso, priceCents, currency, 
         </p>
       </div>
 
-      {/* Day selector */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {days.map((d, i) => (
-          <button
-            key={d.label}
-            type="button"
-            onClick={() => {
-              setDayIdx(i);
-              setSelected(null);
-            }}
-            className={`sf-chip shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${i === dayIdx ? "border-transparent bg-[var(--sf-ink,#111)] text-white" : "bg-transparent"}`}
-          >
-            {d.label}
+      {/* Month calendar */}
+      <div className="rounded-xl border p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <button type="button" onClick={() => shiftMonth(-1)} disabled={!canPrev} aria-label="Previous month" className="rounded-md p-1.5 disabled:opacity-30">
+            <ChevronLeft size={18} />
           </button>
-        ))}
+          <span className="text-sm font-semibold">
+            {MONTHS[view.m - 1]} {view.y}
+          </span>
+          <button type="button" onClick={() => shiftMonth(1)} disabled={!canNext} aria-label="Next month" className="rounded-md p-1.5 disabled:opacity-30">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center">
+          {WEEKDAYS.map((w) => (
+            <div key={w} className="sf-muted py-1 text-[11px] font-medium uppercase">
+              {w}
+            </div>
+          ))}
+          {cells.map((d, i) => {
+            if (d === null) return <div key={`b${i}`} />;
+            const key = dayKey(view.y, view.m, d);
+            const open = byDay.has(key);
+            const isSelected = key === selectedDay;
+            const isToday = key === todayKey;
+            return (
+              <button
+                key={key}
+                type="button"
+                disabled={!open}
+                onClick={() => {
+                  setSelectedDay(key);
+                  setSelected(null);
+                }}
+                className={`relative aspect-square rounded-full text-sm transition-colors ${
+                  isSelected ? "bg-[var(--sf-ink,#111)] font-semibold text-white" : open ? "font-semibold hover:bg-[color-mix(in_srgb,var(--sf-text)_10%,transparent)]" : "opacity-30"
+                } ${isToday && !isSelected ? "ring-1 ring-current" : ""}`}
+              >
+                {d}
+                {open && !isSelected && <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-current" aria-hidden />}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Times */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {day.slots.map((s) => (
-          <button
-            key={s.iso}
-            type="button"
-            onClick={() => setSelected(s.iso)}
-            className={`rounded-lg border px-2 py-2 text-sm transition-colors ${selected === s.iso ? "border-transparent bg-[var(--sf-ink,#111)] text-white" : "hover:border-foreground/40"}`}
-          >
-            {s.time}
-          </button>
-        ))}
-      </div>
+      {/* Times for the chosen day */}
+      {selectedDay && (
+        <div>
+          <p className="sf-muted mb-2 text-sm">{selectedLabel}</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {daySlots.map((s) => (
+              <button
+                key={s.iso}
+                type="button"
+                onClick={() => setSelected(s.iso)}
+                className={`rounded-lg border px-2 py-2 text-sm transition-colors ${selected === s.iso ? "border-transparent bg-[var(--sf-ink,#111)] text-white" : "hover:border-foreground/40"}`}
+              >
+                {s.time}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Details + book */}
       {selected && (
         <form onSubmit={submit} className="space-y-3 border-t pt-4">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            required
-            className="w-full rounded-lg border bg-transparent px-3 py-2.5 text-[0.95rem] outline-none focus:border-foreground/50"
-          />
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            placeholder="you@email.com"
-            required
-            className="w-full rounded-lg border bg-transparent px-3 py-2.5 text-[0.95rem] outline-none focus:border-foreground/50"
-          />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required className={inputCls} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@email.com" required className={inputCls} />
           {marketingOptIn && (
             <label className="flex items-center gap-2 text-sm sf-muted">
               <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
