@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
-import { isProd } from "@/lib/env";
+import { env, isProd } from "@/lib/env";
 import { revalidateStore } from "@/lib/queries";
 
-// Dev-only: drop the cached storefront for a store after out-of-band changes (e.g. scripts/import-products.ts).
+/**
+ * Drop the cached storefront for a store after out-of-band changes (scripts, direct SQL).
+ * Open in dev. In production it needs `Authorization: Bearer $REVALIDATE_SECRET` and is
+ * disabled when that secret isn't set.
+ */
 export async function POST(req: Request) {
-  if (isProd) return NextResponse.json({ error: "disabled" }, { status: 404 });
+  if (isProd) {
+    const secret = env.REVALIDATE_SECRET;
+    if (!secret) return NextResponse.json({ error: "disabled" }, { status: 404 });
+    if (req.headers.get("authorization") !== `Bearer ${secret}`) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const store = new URL(req.url).searchParams.get("store");
   if (!store) return NextResponse.json({ error: "missing store" }, { status: 400 });
   revalidateStore(store);

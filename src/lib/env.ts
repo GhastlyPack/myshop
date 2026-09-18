@@ -10,6 +10,7 @@ const schema = z.object({
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   DATABASE_URL: z.string().default("postgres://localhost:5432/myshop"),
   DATABASE_DIRECT_URL: z.string().optional(),
+  REVALIDATE_SECRET: z.string().optional(), // lets scripts flush a cached storefront in prod via POST /api/dev/revalidate
 
   // Auth0 (creators). If unset in dev → dev bypass login at /dev/login.
   AUTH0_DOMAIN: z.string().optional(),
