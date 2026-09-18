@@ -66,11 +66,11 @@
     font-size: 0.875rem;
   }
   .ld-btn-primary {
-    background: var(--ld-orange-ink);
-    color: #fff;
+    background: var(--ld-orange);
+    color: var(--ld-ink);
   }
   .ld-btn-primary:hover {
-    background: var(--ld-orange-ink-hover);
+    background: var(--ld-orange-deep);
   }
   .ld-btn-ink {
     background: var(--ld-ink);
@@ -191,11 +191,117 @@
     color: rgb(255 255 255 / 0.62);
   }
   .ld-orange-band {
-    background: var(--ld-orange-ink);
-    color: #fff;
+    background: var(--ld-orange);
+    color: var(--ld-ink);
   }
   .ld-orange-band .ld-claim {
     border-color: transparent;
+  }
+  .ld-orange-band .ld-muted {
+    color: rgb(17 17 17 / 0.7);
+  }
+
+  /* ---------- hairline columns (how it works) ---------- */
+  .ld-cols {
+    display: grid;
+    gap: 2rem;
+  }
+  @media (min-width: 640px) {
+    .ld-cols {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+    }
+    .ld-cols > * {
+      padding: 0 2rem;
+      border-left: 1px solid var(--ld-line);
+    }
+    .ld-cols > *:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+    .ld-cols > *:last-child {
+      padding-right: 0;
+    }
+  }
+
+  /* ---------- Instagram DM mockup ---------- */
+  .ld-dm {
+    width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
+    border-radius: 28px;
+    background: #fff;
+    color: var(--ld-ink);
+    border: 1px solid var(--ld-line);
+    overflow: hidden;
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+  .ld-dm-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid var(--ld-line);
+  }
+  .ld-dm-avatar {
+    display: block;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    overflow: hidden;
+    flex: none;
+  }
+  .ld-dm-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.1rem;
+    background: var(--ld-tint);
+  }
+  .ld-dm-row {
+    display: flex;
+  }
+  .ld-dm-row-out {
+    justify-content: flex-end;
+  }
+  .ld-dm-bubble {
+    max-width: 82%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 18px;
+    background: #fff;
+    font-size: 0.86rem;
+    line-height: 1.4;
+  }
+  .ld-dm-bubble-out {
+    background: var(--ld-ink);
+    color: #fff;
+  }
+  .ld-dm-card {
+    width: 82%;
+    border-radius: 18px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .ld-dm-card-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    margin: 0.6rem 0.85rem 0.85rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: var(--ld-orange);
+    color: var(--ld-ink);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .ld-dm-input {
+    margin: 0.75rem 1.1rem 1rem;
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--ld-line);
+    color: var(--ld-muted);
+    font-size: 0.86rem;
   }
   .ld-theme {
     padding: 1.35rem;

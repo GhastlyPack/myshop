@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { Product, ProductLink, Section } from "@/db/schema";
 import { db } from "@/db";
+import { DemoBar } from "@/components/storefront/demo-bar";
 import { StoreFooter } from "@/components/storefront/footer";
 import { resolveStoreTheme } from "@/components/storefront/preview-theme";
 import { ProductCard, type CardProduct } from "@/components/storefront/product-card";
@@ -128,6 +129,7 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
   return (
     <ThemeRoot theme={theme}>
       <JsonLd data={profileLd} />
+      {store.username === "demo" && <DemoBar />}
       {!isPreview && <TrackView storeId={store.id} type="view" />}
       {!isPreview && <GaEvent name="store_view" params={{ store: store.username, product_count: products.length, layout: theme.layout }} />}
       <main className="mx-auto w-full max-w-[600px] px-4 pt-12 pb-6 sm:px-6 sm:pt-16">

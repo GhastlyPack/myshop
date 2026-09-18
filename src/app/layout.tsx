@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: { default: "visitmy.shop", template: "%s · visitmy.shop" },
-  description: "Sell digital products straight from your Instagram bio.",
+  description: "Sell digital products and book calls straight from your Instagram bio.",
   metadataBase: new URL(env.APP_BASE_URL),
   applicationName: "visitmy.shop",
   verification: env.GOOGLE_SITE_VERIFICATION ? { google: env.GOOGLE_SITE_VERIFICATION } : undefined,

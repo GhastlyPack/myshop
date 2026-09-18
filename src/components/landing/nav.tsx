@@ -2,18 +2,17 @@ import Link from "next/link";
 import { Wordmark } from "@/components/brand/wordmark";
 import { MobileMenu } from "./mobile-menu";
 
+/** Four destinations. Creators, FAQ, the guide, and the changelog live in the footer. */
 const links = [
   { href: "/features", label: "Features" },
-  { href: "/#themes", label: "Themes" },
   { href: "/pricing", label: "Pricing" },
   { href: "/compare", label: "Compare" },
-  { href: "/creators", label: "Creators" },
   { href: "/demo", label: "Demo store" },
 ];
 
 export function LandingNav({ signedIn, loginHref }: { signedIn: boolean; loginHref: string }) {
   return (
-    <header className="relative sticky top-0 z-40 border-b ld-line bg-[var(--ld-tint)]">
+    <header className="sticky top-0 z-40 border-b ld-line bg-[var(--ld-tint)]/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
         <Link href="/" className="shrink-0" aria-label="visitmy.shop home">
           <Wordmark size={22} />

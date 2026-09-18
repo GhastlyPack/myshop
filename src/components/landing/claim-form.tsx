@@ -52,7 +52,7 @@ export function ClaimForm({ loginBase, tone = "light", autoFocus }: { loginBase:
           Claim your link
         </button>
       </div>
-      <p className={`mt-2.5 min-h-5 pl-4 text-xs ${error ? "text-red-600" : tone === "orange" ? "text-white/75" : "ld-muted"}`} aria-live="polite">
+      <p className={`mt-2.5 min-h-5 pl-4 text-xs ${error ? (tone === "orange" ? "font-semibold text-[var(--ld-ink)]" : "text-red-600") : "ld-muted"}`} aria-live="polite">
         {error ?? "Letters, numbers, dots and underscores."}
       </p>
     </form>
