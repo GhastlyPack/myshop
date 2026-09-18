@@ -7,7 +7,7 @@ import { ClaimForm } from "@/components/landing/claim-form";
 import { MarketingShell } from "@/components/landing/shell";
 import { getCurrentUser, loginPath } from "@/lib/auth";
 import { CHAPTERS, HERO_ART, type Chapter } from "@/lib/features";
-import { VsStan } from "@/components/landing/vs-stan";
+import { VsOthers } from "@/components/landing/vs-others";
 import { COMPETITORS, PLANS } from "@/lib/plans";
 
 export const metadata: Metadata = {
@@ -57,7 +57,7 @@ export default async function FeaturesPage() {
             </h1>
             <p className="ld-muted mt-6 max-w-xl text-lg leading-relaxed sm:text-xl">
               Sell downloads, book calls, run your Instagram replies, fire your own ad pixels, and design a store that looks like you. From ${PLANS[0].monthly} a month.
-              Stan charges ${COMPETITORS.stan.entry} to start and ${COMPETITORS.stan.top} for the good stuff.
+              The other guys charge ${COMPETITORS.stan.entry} to start and ${COMPETITORS.stan.top} for the good stuff.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               {user ? (
@@ -73,9 +73,10 @@ export default async function FeaturesPage() {
                 See pricing
               </Link>
             </div>
-            <nav aria-label="On this page" className="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <nav aria-label="On this page" className="mt-10 flex flex-wrap gap-x-6 gap-y-2 border-t ld-line pt-4 text-sm font-medium">
+              <span className="ld-muted">On this page</span>
               {CHAPTERS.map((c) => (
-                <a key={c.key} href={`#${c.key}`} className="ld-muted underline-offset-4 hover:text-[var(--ld-ink)] hover:underline">
+                <a key={c.key} href={`#${c.key}`} className="underline-offset-4 hover:text-[var(--ld-orange-ink)] hover:underline">
                   {c.eyebrow}
                 </a>
               ))}
@@ -117,7 +118,7 @@ export default async function FeaturesPage() {
         );
       })}
 
-      <VsStan />
+      <VsOthers />
 
       {/* ---------- final CTA ---------- */}
       <section className="ld-orange-band">

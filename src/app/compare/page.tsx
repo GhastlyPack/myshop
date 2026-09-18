@@ -52,7 +52,8 @@ export default function ComparePage() {
         </div>
 
         {/* matrix */}
-        <div className="ld-card mt-16 overflow-x-auto">
+        <p className="ld-muted mt-16 text-sm lg:hidden">Swipe sideways to see every column.</p>
+        <div className="ld-card mt-3 overflow-x-auto lg:mt-16">
           <table className="ld-table ld-table-wide w-full min-w-[960px]">
             <thead>
               <tr>

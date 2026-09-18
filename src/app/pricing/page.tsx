@@ -116,11 +116,11 @@ export default async function PricingPage() {
             <div className="ld-heading text-[2.6rem]">
               ${basic.monthly} and ${pro.monthly} <span className="ld-muted text-[1.4rem] font-semibold">vs ${COMPETITORS.stan.entry} and ${COMPETITORS.stan.top}</span>
             </div>
-            <h2 className="mt-2 text-lg font-semibold">Against Stan</h2>
+            <h2 className="mt-2 text-lg font-semibold">Against the big-name creator store</h2>
             <p className="ld-muted mt-3 leading-relaxed">
-              A third of Stan&apos;s entry price and half its top price, with booking calls, pixels, and branding removal on Pro instead of a ${COMPETITORS.stan.top} tier, plus pricing tiers and
-              multiple order bumps Stan doesn&apos;t have. Stan charges 0% on both plans; our Basic keeps {basic.feePercent}% and Pro keeps nothing.{" "}
-              <Link href="/compare/stan-store" className="text-[var(--ld-orange-ink)] underline underline-offset-4">
+              A third of their entry price and half their top price, with booking calls, pixels, and branding removal on Pro instead of a ${COMPETITORS.stan.top} tier, plus pricing tiers and
+              multiple order bumps they don&apos;t have. They charge 0% on both plans; our Basic keeps {basic.feePercent}% and Pro keeps nothing.{" "}
+              <Link href="/compare" className="text-[var(--ld-orange-ink)] underline underline-offset-4">
                 The full comparison
               </Link>
               .

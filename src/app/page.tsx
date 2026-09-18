@@ -8,7 +8,7 @@ import { manrope } from "@/components/landing/fonts";
 import { LandingNav } from "@/components/landing/nav";
 import { HeroPhone } from "@/components/landing/phone";
 import { ThemeCards } from "@/components/landing/theme-cards";
-import { VsStan } from "@/components/landing/vs-stan";
+import { VsOthers } from "@/components/landing/vs-others";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getCurrentUser, loginPath } from "@/lib/auth";
 import { CHAPTERS } from "@/lib/features";
@@ -208,7 +208,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <VsStan />
+      <VsOthers />
 
       {/* ---------- final CTA ---------- */}
       <section className="ld-orange-band">

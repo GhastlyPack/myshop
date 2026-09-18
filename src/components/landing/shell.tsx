@@ -19,14 +19,18 @@ export async function MarketingShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Long-form page body: title, intro, prose. */
+/** Long-form page body: title and intro on the tint, the prose on a white surface below. */
 export function Article({ title, intro, updated, children }: { title: string; intro?: string; updated?: string; children: ReactNode }) {
   return (
-    <main className="mx-auto max-w-3xl px-5 py-16 sm:px-8 lg:py-24">
-      <h1 className="ld-heading text-[2.6rem] sm:text-[3.4rem]">{title}</h1>
-      {intro && <p className="ld-muted mt-6 text-xl leading-relaxed">{intro}</p>}
-      {updated && <p className="ld-muted mt-4 text-sm">Updated {updated}</p>}
-      <div className="ld-prose mt-12">{children}</div>
+    <main>
+      <div className="mx-auto max-w-3xl px-5 pt-16 pb-12 sm:px-8 lg:pt-24 lg:pb-16">
+        <h1 className="ld-heading text-[2.6rem] sm:text-[3.4rem]">{title}</h1>
+        {intro && <p className="ld-muted mt-6 text-xl leading-relaxed">{intro}</p>}
+        {updated && <p className="ld-muted mt-4 text-sm">Updated {updated}</p>}
+      </div>
+      <div className="border-t ld-line bg-white">
+        <div className="ld-prose mx-auto max-w-3xl px-5 py-12 sm:px-8 lg:py-16">{children}</div>
+      </div>
     </main>
   );
 }

@@ -11,7 +11,7 @@ const ENTRIES: { date: string; items: string[] }[] = [
   {
     date: "September 17, 2026",
     items: [
-      "New /features page: five illustrated chapters (Sell, Book, Grow, Design, Deliver) and a side-by-side with Stan. The landing page was rebuilt around it, the top nav is down to four links, and buttons use the brand orange.",
+      "New /features page: five illustrated chapters (Sell, Book, Grow, Design, Deliver) and a side-by-side with the other creator stores. The landing page was rebuilt around it, the top nav is down to four links, and buttons use the brand orange.",
       "Pricing tiers on Pro: one product, up to six prices, each unlocking the files you pick. Pay what you want with a floor you set, or none. Up to five order bumps per product, each with its own discount.",
       "Your own ad pixels on Pro: connect Meta, Google, and TikTok pixels per store, plus a Meta Conversions API token for server-side purchase events, deduplicated against the pixel.",
       "Start without a card: claim your link, design the whole store, and reserve it as a draft. A card is asked for when you publish, upload a file, or switch on a Pro feature, and it starts 7 days of full Pro. At the end you're on Basic unless you upgrade; upgrade during the trial and take 5% off Pro for 12 months.",

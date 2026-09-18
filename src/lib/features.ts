@@ -33,7 +33,7 @@ export const CHAPTERS: Chapter[] = [
       { title: "Links", body: "Sell or give away something you host elsewhere. The card goes straight to it after checkout." },
       { title: "Pricing tiers", body: "One product, up to six prices: Basic, Plus, Pro. Each tier unlocks the files you pick.", pro: true },
       { title: "Pay what you want", body: "Set a suggested price and a floor, or no floor at all. Buyers name their number.", pro: true },
-      { title: "Order bumps, plural", body: "Offer up to five one-tap add-ons above the pay button, each with its own discount. Stan allows one.", pro: true },
+      { title: "Order bumps, plural", body: "Offer up to five one-tap add-ons above the pay button, each with its own discount. Most stores allow one.", pro: true },
       { title: "Discount codes and limited quantity", body: "Percent or amount off, expiry, max uses. Cap a launch at 50 seats and watch it sell out.", pro: true },
       { title: "Custom checkout questions", body: "Ask for a handle, a size, a goal. Answers land on the order.", pro: true },
       { title: "Clean product links", body: "visitmy.shop/you/my-guide. No random numbers stapled to the end." },

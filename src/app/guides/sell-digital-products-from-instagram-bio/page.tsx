@@ -77,6 +77,10 @@ export default function GuidePage() {
           all caps, easy to spell.
         </p>
         <p>A caption that works: say what the product does in one line, say who it is for, then “Comment GUIDE and I’ll DM it to you.”</p>
+        <p>
+          The same move sells your time. Make a booking product, give it the keyword CONSULT, and the reply carries a card with a Book now button that goes straight to
+          your open hours.
+        </p>
 
         <h2>7. Deliver instantly, and let them find it again</h2>
         <p>
