@@ -75,3 +75,4 @@ coverage/
 
 # local data (dev storage + outbox)
 .data/
+scripts/features-art/composed/
