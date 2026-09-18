@@ -10,6 +10,8 @@ import { saveProduct, type DiscountCodeRow, type FileRow } from "@/app/app/produ
 import { CheckoutTab } from "@/components/app/product-editor/checkout-tab";
 import { ContentTab } from "@/components/app/product-editor/content-tab";
 import { DetailsTab } from "@/components/app/product-editor/details-tab";
+import { CardPreview } from "@/components/app/product-editor/card-preview";
+import type { ResolvedTheme } from "@/lib/theme";
 import { OptionsTab } from "@/components/app/product-editor/options-tab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +59,7 @@ export function ProductEditor({
   discountCodes,
   tier,
   canBook,
+  theme,
 }: {
   product: EditorProduct;
   thumbnailUrl: string | null;
@@ -71,6 +74,7 @@ export function ProductEditor({
   discountCodes: DiscountCodeRow[];
   tier: "basic" | "pro";
   canBook?: boolean;
+  theme: ResolvedTheme;
 }) {
   const router = useRouter();
   const { id, status: initialStatus, ...rest } = product;
@@ -171,6 +175,7 @@ export function ProductEditor({
         </p>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="details">Details</TabsTrigger>
@@ -201,6 +206,10 @@ export function ProductEditor({
           <OptionsTab form={form} update={update} errors={errors} productId={id} username={store.username} slug={savedSlug} />
         </TabsContent>
       </Tabs>
+      <aside className="lg:sticky lg:top-6">
+        <CardPreview form={form} theme={theme} thumbnailUrl={thumbnailUrl} bannerUrl={bannerUrl} currency={store.currency} />
+      </aside>
+      </div>
     </div>
   );
 }

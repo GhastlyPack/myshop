@@ -54,10 +54,18 @@ export default async function ThanksPage({ params, searchParams }: Props) {
   if (!store || !product || store.username !== username.toLowerCase() || product.slug !== slug.toLowerCase()) notFound();
   const theme = resolveTheme(store.theme);
 
-  // Booking order: a call, not a download.
+  // Booking order: a call, not a download (though it may carry pre-call materials).
   if (product.type === "booking") {
     const booking = await db.query.bookings.findFirst({ where: eq(bookings.orderId, order.id) });
     const pending = order.status === "pending" || !booking;
+    const bEnt = booking ? await db.query.entitlements.findFirst({ where: and(eq(entitlements.orderId, order.id), eq(entitlements.revoked, false)) }) : undefined;
+    const [bFiles, bLinks] = booking
+      ? await Promise.all([
+          db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),
+          db.select().from(productLinks).where(eq(productLinks.productId, product.id)).orderBy(asc(productLinks.position)),
+        ])
+      : [[], []];
+    const hasMaterials = (bEnt && bFiles.length > 0) || bLinks.length > 0;
     return (
       <ThemeRoot theme={theme}>
         <main className="mx-auto w-full max-w-[600px] px-4 pt-6 pb-6 sm:px-6 sm:pt-8">
@@ -94,6 +102,30 @@ export default async function ThanksPage({ params, searchParams }: Props) {
                 </>
               )}
             </section>
+            {!pending && hasMaterials && (
+              <section className="sf-surface p-6 sm:p-7">
+                <h2 className="sf-heading text-[1.1rem]">Before your call</h2>
+                <ul className="mt-4 space-y-2">
+                  {bEnt &&
+                    bFiles.map((f) => (
+                      <li key={f.id}>
+                        <a href={`/d/${bEnt.token}?f=${encodeURIComponent(f.id)}`} className="sf-btn sf-btn-ghost w-full justify-between">
+                          <span className="truncate">{f.filename}</span>
+                          <Download size={18} />
+                        </a>
+                      </li>
+                    ))}
+                  {bLinks.map((l) => (
+                    <li key={l.id}>
+                      <a href={l.url} target="_blank" rel="noreferrer" className="sf-btn sf-btn-ghost w-full justify-between">
+                        <span className="truncate">{l.label}</span>
+                        <ArrowUpRight size={18} />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
         </main>
       </ThemeRoot>

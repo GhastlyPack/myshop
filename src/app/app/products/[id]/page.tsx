@@ -7,6 +7,7 @@ import { ProductEditor } from "@/components/app/product-editor/editor";
 import { requireStore } from "@/lib/auth";
 import { planTier } from "@/lib/billing";
 import { canUseBookings } from "@/lib/bookings-access";
+import { resolveTheme } from "@/lib/theme";
 import { env } from "@/lib/env";
 import { publicUrl } from "@/lib/storage";
 
@@ -85,6 +86,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
       baseUrl={env.APP_BASE_URL}
       tier={tier}
       canBook={canBook}
+      theme={resolveTheme(store.theme)}
     />
   );
 }

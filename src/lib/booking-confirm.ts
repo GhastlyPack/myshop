@@ -1,11 +1,11 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { bookings, users, type Booking, type Product, type Store } from "@/db/schema";
+import { bookings, entitlements, productFiles, productLinks, users, type Booking, type Product, type Store } from "@/db/schema";
 import { DEFAULT_BOOKING_SETTINGS } from "@/lib/booking";
 import { createCalendarEvent } from "@/lib/calendar";
 import { buildIcs } from "@/lib/ics";
-import { newId } from "@/lib/ids";
+import { newId, newToken } from "@/lib/ids";
 import { sendMail } from "@/lib/mailer";
 import { renderBookingEmail } from "@/emails/booking";
 import { env } from "@/lib/env";
@@ -74,6 +74,31 @@ export async function confirmBooking(opts: {
     })
     .returning();
 
+  // Pre-call materials: a booking can carry files/links (e.g. a prep doc). Grant an entitlement
+  // so the buyer's download links work, and list them in their confirmation email.
+  let downloads: { name: string; url: string }[] = [];
+  let links: { label: string; url: string }[] = [];
+  try {
+    const [files, extLinks] = await Promise.all([
+      db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),
+      db.select().from(productLinks).where(eq(productLinks.productId, product.id)).orderBy(asc(productLinks.position)),
+    ]);
+    if (files.length > 0) {
+      let ent = await db.query.entitlements.findFirst({ where: eq(entitlements.orderId, orderId) });
+      if (!ent) {
+        [ent] = await db
+          .insert(entitlements)
+          .values({ id: newId("ent"), orderId, productId: product.id, buyerEmail, token: newToken() })
+          .returning();
+      }
+      const base = env.APP_BASE_URL.replace(/\/+$/, "");
+      downloads = files.map((f) => ({ name: f.filename, url: `${base}/d/${ent!.token}?f=${encodeURIComponent(f.id)}` }));
+    }
+    links = extLinks.map((l) => ({ label: l.label, url: l.url }));
+  } catch (e) {
+    console.error("[booking] materials failed", e);
+  }
+
   // Emails with the .ics invite. Best-effort.
   try {
     const owner = await db.query.users.findFirst({ where: eq(users.id, store.userId), columns: { email: true } });
@@ -100,6 +125,8 @@ export async function confirmBooking(opts: {
       whenText: formatBookingWhen(startAt, endAt, buyerTz),
       meetUrl: meetingUrl ?? undefined,
       forCreator: false,
+      downloads,
+      links,
     });
     await sendMail({ to: buyerEmail, ...buyerMail, attachments });
 

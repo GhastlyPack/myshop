@@ -1,4 +1,4 @@
-import { Button, Hr, Section, Text, render } from "@react-email/components";
+import { Button, Hr, Link, Section, Text, render } from "@react-email/components";
 import { EmailLayout, emailStyles as s } from "./layout";
 
 /** Booking confirmation, sent to the buyer (and a heads-up to the creator). Carries an .ics attachment. */
@@ -14,6 +14,9 @@ export type BookingEmailProps = {
   meetUrl?: string;
   /** Creator copy is worded as an incoming booking; buyer copy as a confirmation. */
   forCreator?: boolean;
+  /** Pre-call materials attached to the booking product (download links + external links). */
+  downloads?: { name: string; url: string }[];
+  links?: { label: string; url: string }[];
 };
 
 export function BookingEmail(p: BookingEmailProps) {
@@ -35,6 +38,25 @@ export function BookingEmail(p: BookingEmailProps) {
             Join the call
           </Button>
           <Text style={s.muted}>Or paste this link at the time: {p.meetUrl}</Text>
+        </Section>
+      )}
+      {!p.forCreator && ((p.downloads?.length ?? 0) > 0 || (p.links?.length ?? 0) > 0) && (
+        <Section style={{ margin: "0 0 18px" }}>
+          <Text style={{ ...s.muted, margin: "0 0 8px", textTransform: "uppercase", letterSpacing: 1.2, fontSize: 11 }}>Before your call</Text>
+          {p.downloads?.map((d) => (
+            <div key={d.url} style={s.fileRow}>
+              <Link href={d.url} style={{ ...s.link, fontWeight: 600, fontSize: 15 }}>
+                {d.name}
+              </Link>
+            </div>
+          ))}
+          {p.links?.map((l) => (
+            <div key={l.url} style={s.fileRow}>
+              <Link href={l.url} style={{ ...s.link, fontWeight: 600, fontSize: 15 }}>
+                {l.label}
+              </Link>
+            </div>
+          ))}
         </Section>
       )}
       <Hr style={{ borderColor: "#DDE3EC", margin: "18px 0" }} />
