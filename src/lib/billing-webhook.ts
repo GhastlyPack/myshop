@@ -2,9 +2,10 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "@/db";
-import { subscriptions } from "@/db/schema";
+import { stores, subscriptions } from "@/db/schema";
 import { planFromLookupKey } from "@/lib/billing";
 import { getStripe } from "@/lib/payments/stripe";
+import { revalidateStore } from "@/lib/queries";
 
 /**
  * Subscription webhook handling for OUR billing, HTTP-free so it can be driven
@@ -137,6 +138,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, deps: B
       ...(shape.trialEndsAt ? { trialEndsAt: shape.trialEndsAt } : {}),
     })
     .where(eq(subscriptions.userId, userId));
+
+  // If the creator started this checkout by hitting Publish, take their draft live now so they
+  // don't have to come back and click Publish again. Uploading a file just starts the trial and
+  // leaves the store as a draft, so a half-built store never goes public by surprise.
+  const publishOnStart = session.metadata?.publishOnStart === "1" && (shape.status === "trialing" || shape.status === "active");
+  if (publishOnStart) {
+    const st = await db.query.stores.findFirst({ where: eq(stores.userId, userId), columns: { username: true, published: true } });
+    if (st && !st.published) {
+      await db.update(stores).set({ published: true }).where(eq(stores.userId, userId));
+      revalidateStore(st.username);
+    }
+  }
   return { handled: true, action: "checkout_completed", userId };
 }
 
@@ -164,6 +177,9 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription): Promise<Bill
   const userId = await findRowUserId({ userId: sub.metadata?.userId ?? null, subscriptionId: sub.id, customerId: asId(sub.customer) });
   if (!userId) return { handled: false, action: "ignored", reason: `no subscription row for ${sub.id}` };
   await db.update(subscriptions).set({ status: "canceled", cancelAtPeriodEnd: false }).where(eq(subscriptions.userId, userId));
+  // No card, no free tier: a canceled subscription takes the store offline. The username and all
+  // content are kept, so resubscribing (and re-publishing) brings it straight back.
+  await db.update(stores).set({ published: false }).where(eq(stores.userId, userId));
   return { handled: true, action: "subscription_deleted", userId };
 }
 

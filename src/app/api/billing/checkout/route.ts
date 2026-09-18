@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const querySchema = z.object({
   plan: z.enum(["basic", "pro"]),
   interval: z.enum(["month", "year"]).default("month"),
+  then: z.enum(["publish"]).optional(),
 });
 
 /**
@@ -22,11 +23,16 @@ export async function GET(req: Request) {
 
   const user = await requireUser();
   const { searchParams } = new URL(req.url);
-  const parsed = querySchema.safeParse({ plan: searchParams.get("plan"), interval: searchParams.get("interval") ?? undefined });
+  const parsed = querySchema.safeParse({ plan: searchParams.get("plan"), interval: searchParams.get("interval") ?? undefined, then: searchParams.get("then") ?? undefined });
   if (!parsed.success) return NextResponse.redirect(`${billingUrl}?billing=error`, { status: 303 });
 
   try {
-    const url = await createBillingCheckout({ user, lookupKey: lookupKeyFor(parsed.data.plan, parsed.data.interval), returnUrl: billingUrl });
+    const url = await createBillingCheckout({
+      user,
+      lookupKey: lookupKeyFor(parsed.data.plan, parsed.data.interval),
+      returnUrl: billingUrl,
+      publishOnStart: parsed.data.then === "publish",
+    });
     return NextResponse.redirect(url, { status: 303 });
   } catch (e) {
     console.error("[billing checkout] failed", e);

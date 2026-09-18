@@ -64,6 +64,13 @@ function FilesPanel({
       try {
         const { key } = await uploadFile(file, { bucket: "files", scope: "product", onProgress: (pct) => patch(localId, { progress: pct }) });
         const res = await addProductFile(productId, { key, filename: file.name, bytes: file.size, mime: file.type || null });
+        if (!res.ok && res.code === "card_required") {
+          toast.info("Add a card to start your free trial, then upload your files.");
+          // Full-page navigation: this route 303-redirects to Stripe Checkout (external), so router.push can't follow it.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.href = "/api/billing/checkout?plan=basic&interval=month";
+          return;
+        }
         if (!res.ok) throw new Error(res.error);
         setFiles((f) => [...f, res.file]);
         setPending((p) => p.filter((x) => x.localId !== localId));

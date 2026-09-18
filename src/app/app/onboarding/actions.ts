@@ -54,14 +54,16 @@ export async function createStore(input: z.input<typeof createSchema>): Promise<
       displayName: parsed.data.displayName,
       bio: parsed.data.bio || null,
       theme: { preset: "paper", ...THEME_PRESETS.paper.theme }, // distinctive from day one; the design page is the next stop
+      published: false, // draft: the link is reserved and the store is designable, but not public until the card gate is cleared
     });
   } catch {
     // unique index on username or user_id
     return { ok: false, errors: { username: "That username is taken." } };
   }
-  // New signups start on Basic terms (5% fee). Their 7-day Pro trial is card-backed:
-  // it starts through Stripe Checkout (see createBillingCheckout) so the plan
-  // auto-charges when the trial ends. No free, card-free Pro period is granted here.
+  // The store starts as a draft with no card. Designing and reserving the link are free;
+  // the 7-day Pro trial (see createBillingCheckout) starts through Stripe Checkout when the
+  // creator uploads a file, uses a Pro feature, or publishes — the card gate. The trial is
+  // billed on the Basic price, so unless they upgrade, it rolls onto Basic ($9) when it ends.
   revalidateStore(username);
   return { ok: true };
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
-import { PlanCards } from "@/components/app/billing/plan-cards";
+import { BillingChoices, type BillingMode } from "@/components/app/billing/billing-choices";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/local-time";
@@ -37,6 +37,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const sub = await getSubscription(store.userId);
   // The card-backed 7-day trial is only offered to a store that has never had a Stripe subscription.
   const trialAvailable = !plan.grandfathered && !sub?.stripeSubscriptionId;
+  const billingMode: BillingMode = trialAvailable
+    ? "start_trial"
+    : plan.trialing
+      ? "trialing"
+      : plan.status === "active"
+        ? plan.tier === "pro"
+          ? "pro"
+          : "basic"
+        : "resubscribe"; // had a subscription, now lapsed or canceled — store is offline
   const status = STATUS_LABEL[plan.status] ?? STATUS_LABEL.none;
 
   // "You'd save on Pro": platform fees this store's buyers paid in the last 30 days (Basic only).
@@ -88,8 +97,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         ) : plan.trialing && plan.trialEndsAt ? (
           plan.manageable ? (
             <p className="text-sm text-muted-foreground">
-              Pro trial — {daysUntil(plan.trialEndsAt)} day{daysUntil(plan.trialEndsAt) === 1 ? "" : "s"} left. Your card is on file and your plan starts automatically on{" "}
-              <LocalTime date={plan.trialEndsAt} mode="date" />. Cancel any time before then from Manage billing and you won&apos;t be charged.
+              Pro trial — {daysUntil(plan.trialEndsAt)} day{daysUntil(plan.trialEndsAt) === 1 ? "" : "s"} left. When it ends on <LocalTime date={plan.trialEndsAt} mode="date" /> you roll
+              onto Basic ($9/mo, 5% fee) unless you upgrade to Pro. Cancel before then from Manage billing and your store goes offline instead.
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -114,9 +123,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         {savedHint && <p className="text-sm">In the last 30 days you paid <span className="font-semibold">{savedHint}</span> in transaction fees. On Pro that would be $0.</p>}
       </section>
 
-      {/* Plan picker */}
+      {/* Plan choices */}
       {plan.grandfathered ? null : stripeConfigured ? (
-        <PlanCards currentTier={plan.tier} trialing={plan.trialing} trialAvailable={trialAvailable} />
+        <BillingChoices mode={billingMode} />
       ) : (
         <div className="rounded-xl border bg-muted/40 p-5 text-sm text-muted-foreground">Plan changes will be available once billing is enabled on this deployment.</div>
       )}

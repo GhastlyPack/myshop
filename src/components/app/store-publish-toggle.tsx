@@ -19,6 +19,14 @@ export function StorePublishToggle({ published: initial, username }: { published
       const res = await setStorePublished(next);
       if (!res.ok) {
         setPublished(!next);
+        if (res.code === "card_required") {
+          toast.info("Add a card to start your free trial, then your store goes live.");
+          // Full-page navigation: this route 303-redirects to Stripe Checkout (external), so router.push can't follow it.
+          // `then=publish` tells the webhook to take the draft live once the trial starts.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.href = "/api/billing/checkout?plan=basic&interval=month&then=publish";
+          return;
+        }
         toast.error(res.error);
         return;
       }

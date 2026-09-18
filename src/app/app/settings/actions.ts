@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { instagramAccounts, instagramBetaRequests, productFiles, products, stores, type SocialLinks } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
+import { storeHasBilling } from "@/lib/billing";
 import { CURRENCIES } from "@/lib/format";
 import { newId } from "@/lib/ids";
 import { revalidateStore } from "@/lib/queries";
@@ -72,8 +73,12 @@ export async function updateProfile(input: ProfileInput): Promise<ProfileResult>
   return { ok: true };
 }
 
-export async function setStorePublished(published: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function setStorePublished(published: boolean): Promise<{ ok: true } | { ok: false; error: string; code?: "card_required" }> {
   const { store } = await requireStore();
+  // The card gate: going live requires a plan (trialing/active/comped). Unpublishing is always allowed.
+  if (published && !(await storeHasBilling(store))) {
+    return { ok: false, error: "Add a card to start your free trial before you go live.", code: "card_required" };
+  }
   await db.update(stores).set({ published: Boolean(published) }).where(eq(stores.id, store.id));
   revalidateStore(store.username);
   revalidatePath("/app");

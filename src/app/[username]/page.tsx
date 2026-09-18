@@ -13,7 +13,8 @@ import { absoluteUrl } from "@/lib/site";
 import Markdown from "react-markdown";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { TrackView } from "@/components/storefront/track-view";
-import { getPublicStoreTagged, storeTag } from "@/lib/queries";
+import { getDraftStoreForOwner, getPublicStoreTagged, storeTag } from "@/lib/queries";
+import { getCurrentStore } from "@/lib/auth";
 import { planTier } from "@/lib/billing";
 import { publicUrl } from "@/lib/storage";
 import { inArray } from "drizzle-orm";
@@ -52,7 +53,14 @@ async function firstLinks(username: string, products: Product[]) {
 
 export default async function StorefrontPage({ params, searchParams }: Props) {
   const [{ username }, sp] = await Promise.all([params, searchParams]);
-  const data = await getPublicStoreTagged(username);
+  let data = await getPublicStoreTagged(username);
+  if (!data) {
+    // Draft stores are private, except to their owner previewing them in the design editor.
+    const owner = await getCurrentStore();
+    if (owner && !owner.published && owner.username.toLowerCase() === username.toLowerCase()) {
+      data = await getDraftStoreForOwner(username, owner.userId);
+    }
+  }
   if (!data) notFound();
   const { store, sections, products } = data;
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);

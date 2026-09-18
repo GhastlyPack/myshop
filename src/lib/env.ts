@@ -41,6 +41,7 @@ const schema = z.object({
   STRIPE_CONNECT_CLIENT_ID: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(), // Connect endpoint (/api/webhooks/stripe)
   STRIPE_BILLING_WEBHOOK_SECRET: z.string().optional(), // platform-account subscription endpoint (/api/webhooks/billing)
+  STRIPE_UPGRADE_COUPON_ID: z.string().optional(), // early-bird discount applied when a creator upgrades to Pro during their trial
 
   // PayPal Commerce Platform (partner). If unset → hidden.
   PAYPAL_CLIENT_ID: z.string().optional(),

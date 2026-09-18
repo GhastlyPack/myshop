@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "@/db";
 import { subscriptions, type Subscription, type User } from "@/db/schema";
-import { billingConfigured } from "@/lib/env";
+import { billingConfigured, env } from "@/lib/env";
 import { newId } from "@/lib/ids";
 import { getStripe } from "@/lib/payments/stripe";
 
@@ -114,6 +114,20 @@ export async function planTier(store: { userId: string }): Promise<Tier> {
   return (await resolvePlan(store)).tier;
 }
 
+/**
+ * Does this creator have a live billing relationship — a card on file (trialing
+ * or active) or a comp? This is the gate for publishing, uploading files and
+ * anything else that requires the creator to have started their plan. A brand-new
+ * draft store returns false until it clears the card gate.
+ */
+export function planHasBilling(plan: EffectivePlan): boolean {
+  return plan.grandfathered || plan.trialing || plan.status === "active";
+}
+
+export async function storeHasBilling(store: { userId: string }): Promise<boolean> {
+  return planHasBilling(await resolvePlan(store));
+}
+
 /** Server-component guard: bounce Basic stores to the billing page with the feature they hit. */
 export async function requirePlan(store: { userId: string }, tier: Tier): Promise<EffectivePlan> {
   const plan = await resolvePlan(store);
@@ -176,7 +190,7 @@ export async function getOrCreateCustomer(user: Pick<User, "id" | "email" | "nam
   return customer.id;
 }
 
-export type BillingCheckoutInput = { user: Pick<User, "id" | "email" | "name">; lookupKey: LookupKey; returnUrl: string };
+export type BillingCheckoutInput = { user: Pick<User, "id" | "email" | "name">; lookupKey: LookupKey; returnUrl: string; publishOnStart?: boolean };
 
 /**
  * Stripe Checkout Session (mode: subscription) on the platform account. A
@@ -186,7 +200,7 @@ export type BillingCheckoutInput = { user: Pick<User, "id" | "email" | "name">; 
  * subscription (converted or canceled) subscribes with no trial, so a trial
  * can't be farmed by resubscribing.
  */
-export async function createBillingCheckout({ user, lookupKey, returnUrl }: BillingCheckoutInput): Promise<string> {
+export async function createBillingCheckout({ user, lookupKey, returnUrl, publishOnStart }: BillingCheckoutInput): Promise<string> {
   const row = await ensureRow(user.id);
   if (row.grandfathered) throw new Error("Grandfathered accounts don't need to subscribe.");
   const [customer, price] = await Promise.all([getOrCreateCustomer(user), priceIdForLookupKey(lookupKey)]);
@@ -209,7 +223,7 @@ export async function createBillingCheckout({ user, lookupKey, returnUrl }: Bill
     customer,
     line_items: [{ price, quantity: 1 }],
     client_reference_id: user.id,
-    metadata: { userId: user.id, lookupKey },
+    metadata: { userId: user.id, lookupKey, publishOnStart: publishOnStart ? "1" : "0" },
     subscription_data: subscriptionData,
     // Require a card even for the trial so the plan auto-charges the moment the trial ends.
     payment_method_collection: "always",
@@ -227,6 +241,42 @@ export async function createPortalSession(user: Pick<User, "id" | "email" | "nam
   const stripe = getStripe();
   const session = await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl });
   return session.url;
+}
+
+/**
+ * Switch an existing subscription up to Pro. The trial (if any) is preserved, so a
+ * creator upgrading mid-trial keeps their remaining free days and only starts paying
+ * Pro when the trial ends. Upgrading while still in the trial also applies the
+ * early-bird coupon ({@link env.STRIPE_UPGRADE_COUPON_ID}) when one is configured.
+ * Upgrading after the trial prorates the change immediately.
+ */
+export async function upgradeToPro(user: Pick<User, "id" | "email" | "name">, interval: "month" | "year"): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sub = await getSubscription(user.id);
+  if (!sub) return { ok: false, error: "You don't have a plan yet." };
+  if (sub.grandfathered) return { ok: false, error: "You're already on Pro." };
+  if (!sub.stripeSubscriptionId) return { ok: false, error: "Start your free trial first." };
+
+  const stripe = getStripe();
+  const proPrice = await priceIdForLookupKey(lookupKeyFor("pro", interval));
+  const current = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+  const itemId = current.items?.data?.[0]?.id;
+  if (!itemId) return { ok: false, error: "Couldn't read your subscription." };
+
+  const trialing = current.status === "trialing";
+  const coupon = env.STRIPE_UPGRADE_COUPON_ID;
+  await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+    items: [{ id: itemId, price: proPrice }],
+    // Mid-trial there's nothing to prorate; after the trial, prorate the jump to Pro.
+    proration_behavior: trialing ? "none" : "create_prorations",
+    ...(trialing && coupon ? { discounts: [{ coupon }] } : {}),
+  });
+
+  // Reflect immediately; the subscription.updated webhook will confirm.
+  await db
+    .update(subscriptions)
+    .set({ plan: "pro", interval, stripePriceLookupKey: lookupKeyFor("pro", interval) })
+    .where(eq(subscriptions.userId, user.id));
+  return { ok: true };
 }
 
 export { billingConfigured };

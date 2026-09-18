@@ -35,6 +35,26 @@ export async function getPublicStore(usernameRaw: string) {
   return { store, sections: secs, products: prods };
 }
 
+/**
+ * Owner-only view of a store regardless of its published state, so the design editor can
+ * preview a draft during onboarding. Uncached and scoped to the owner's userId, so it never
+ * exposes anyone else's unpublished store.
+ */
+export async function getDraftStoreForOwner(usernameRaw: string, ownerUserId: string) {
+  const username = usernameRaw.toLowerCase();
+  const store = await db.query.stores.findFirst({ where: and(eq(stores.username, username), eq(stores.userId, ownerUserId)) });
+  if (!store) return null;
+  const [secs, prods] = await Promise.all([
+    db.select().from(sections).where(eq(sections.storeId, store.id)).orderBy(asc(sections.position)),
+    db
+      .select()
+      .from(products)
+      .where(and(eq(products.storeId, store.id), eq(products.status, "published"), eq(products.listed, true), isNull(products.deletedAt)))
+      .orderBy(asc(products.position)),
+  ]);
+  return { store, sections: secs, products: prods };
+}
+
 /** Cached under the username tag (used by the page so the tag attaches). */
 export async function getPublicStoreTagged(username: string) {
   const fn = unstable_cache(() => getPublicStore(username), ["public-store", username.toLowerCase()], {

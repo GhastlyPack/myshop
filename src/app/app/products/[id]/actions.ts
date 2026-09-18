@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { discountCodes, productFiles, productLinks, products, sections, type CustomField, type DiscountCode } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
 import { canOfferBump } from "@/lib/commerce";
-import { planTier } from "@/lib/billing";
+import { planTier, storeHasBilling } from "@/lib/billing";
 import { newId } from "@/lib/ids";
 import { discountCodeInputSchema, productInputSchema, toSlug, type DiscountCodeInput, type ProductInput } from "@/lib/product-input";
 import { revalidateStore } from "@/lib/queries";
@@ -184,8 +184,12 @@ const fileMetaSchema = z.object({
 export type FileRow = { id: string; filename: string; bytes: number; mime: string | null };
 
 /** Records an uploaded file (the bytes are already in storage under `key`). */
-export async function addProductFile(productId: string, meta: z.input<typeof fileMetaSchema>): Promise<{ ok: true; file: FileRow } | { ok: false; error: string }> {
+export async function addProductFile(productId: string, meta: z.input<typeof fileMetaSchema>): Promise<{ ok: true; file: FileRow } | { ok: false; error: string; code?: "card_required" }> {
   const { store } = await requireStore();
+  // The card gate: uploading a deliverable requires a plan (trialing/active/comped).
+  if (!(await storeHasBilling(store))) {
+    return { ok: false, error: "Add a card to start your free trial before uploading files.", code: "card_required" };
+  }
   const product = await ownProduct(productId, store.id);
   if (!product) return { ok: false, error: "Product not found." };
   const parsed = fileMetaSchema.safeParse(meta);
