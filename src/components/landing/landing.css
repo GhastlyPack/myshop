@@ -148,6 +148,7 @@
   /* ---------- phone mockup ---------- */
   .ld-phone {
     width: 300px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 10px;
     border-radius: 46px;
@@ -221,6 +222,105 @@
     }
     .ld-cols > *:last-child {
       padding-right: 0;
+    }
+  }
+
+  /* ---------- played scenes (walkthrough, DM) ---------- */
+  .ld-phone-sm {
+    width: 260px;
+    max-width: 100%;
+  }
+  .ld-phone-sm .ld-screen {
+    aspect-ratio: 9 / 17;
+  }
+  .ld-beat {
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+      transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .ld-beat-on {
+    opacity: 1;
+    transform: none;
+  }
+  .ld-press {
+    transition:
+      transform 0.25s,
+      opacity 0.45s,
+      filter 0.25s;
+  }
+  .ld-press[data-pressed="true"] {
+    transform: scale(0.97);
+    filter: brightness(0.94);
+  }
+  .ld-fakecheck {
+    display: grid;
+    place-content: center;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    border-radius: 5px;
+    border: 1.5px solid color-mix(in srgb, var(--sf-text) 30%, transparent);
+    color: transparent;
+    transition:
+      background 0.2s,
+      border-color 0.2s,
+      color 0.2s;
+  }
+  .ld-fakecheck-on {
+    background: var(--sf-accent);
+    border-color: var(--sf-accent);
+    color: var(--sf-accent-text);
+  }
+  .ld-dm-typing {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 0.8rem 0.9rem;
+  }
+  .ld-dm-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--ld-muted);
+    animation: ld-dot 1s ease-in-out infinite;
+  }
+  .ld-dm-typing span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .ld-dm-typing span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes ld-dot {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+  }
+  .ld-card-lift {
+    transition:
+      transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+      background 0.15s;
+  }
+  .ld-card-lift:hover {
+    transform: translateY(-3px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ld-beat,
+    .ld-press,
+    .ld-card-lift {
+      transition: none;
+      transform: none;
+    }
+    .ld-dm-typing span {
+      animation: none;
     }
   }
 

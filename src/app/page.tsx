@@ -8,6 +8,7 @@ import { manrope } from "@/components/landing/fonts";
 import { LandingNav } from "@/components/landing/nav";
 import { HeroPhone } from "@/components/landing/phone";
 import { ThemeCards } from "@/components/landing/theme-cards";
+import { Walkthrough } from "@/components/landing/walkthrough";
 import { VsOthers } from "@/components/landing/vs-others";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getCurrentUser, loginPath } from "@/lib/auth";
@@ -35,11 +36,6 @@ const IG_ROWS: [string, string][] = [
   ["Your pixels see all of it", "Meta, Google, and TikTok fire on every view, checkout, and purchase, so your ads learn from real buyers."],
 ];
 
-const SCREENS = [
-  { src: "/landing/shots/store-2.jpg", t: "Your store", b: "One link. Your name, your products, your theme. Live at visitmy.shop/you." },
-  { src: "/landing/shots/product-2.jpg", t: "A product page", b: "Title, price, cover, a few bullets, and reviews from real buyers." },
-  { src: "/landing/shots/checkout-2.jpg", t: "Checkout", b: "Name and email for a free download. Card for a paid one. File lands in seconds." },
-];
 
 export default async function Home() {
   const user = await getCurrentUser();
@@ -148,7 +144,7 @@ export default async function Home() {
           <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {CHAPTERS.map((c) => (
               <li key={c.key}>
-                <Link href={`/features#${c.key}`} className="ld-card flex h-full flex-col overflow-hidden transition-colors hover:bg-[var(--ld-tint)]">
+                <Link href={`/features#${c.key}`} className="ld-card ld-card-lift flex h-full flex-col overflow-hidden hover:bg-[var(--ld-tint)]">
                   <Image src={`/landing/features/${c.art.file}`} alt={c.art.alt} width={c.art.width} height={c.art.height} className="aspect-[3/2] w-full object-cover" sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw" />
                   <span className="flex flex-1 flex-col p-6">
                     <span className="text-xl font-semibold tracking-tight">{c.title}</span>
@@ -185,25 +181,15 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- real screens ---------- */}
+      {/* ---------- walkthrough ---------- */}
       <section className="ld-ink">
         <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
           <div className="max-w-2xl">
-            <h2 className="ld-heading text-[2.4rem] sm:text-[3.4rem]">Your first five minutes.</h2>
-            <p className="ld-muted mt-5 text-lg leading-relaxed">Real screens from a real store on visitmy.shop, not mockups. Claim a link, upload a file, and this is what your buyers see.</p>
+            <h2 className="ld-heading text-[2.4rem] sm:text-[3.4rem]">One sale, start to finish.</h2>
+            <p className="ld-muted mt-5 text-lg leading-relaxed">The store, the booking page, and the checkout, built from the same parts your buyers will use. Watch it run.</p>
           </div>
-          <div className="mt-14 grid gap-10 sm:grid-cols-3 sm:gap-6">
-            {SCREENS.map((s) => (
-              <figure key={s.t}>
-                <div className="mx-auto w-[260px] rounded-[40px] bg-[#0f0f10] p-2.5">
-                  <Image src={s.src} alt={s.t} width={1000} height={2164} className="w-full rounded-[32px]" sizes="260px" />
-                </div>
-                <figcaption className="mt-6 text-center sm:text-left">
-                  <div className="text-lg font-semibold">{s.t}</div>
-                  <p className="ld-muted mt-1.5 text-[0.95rem] leading-relaxed">{s.b}</p>
-                </figcaption>
-              </figure>
-            ))}
+          <div className="mt-14">
+            <Walkthrough />
           </div>
         </div>
       </section>
