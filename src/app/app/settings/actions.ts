@@ -74,6 +74,15 @@ export async function updateProfile(input: ProfileInput): Promise<ProfileResult>
   return { ok: true };
 }
 
+/** Disconnect the store's Google Calendar (revokes the token and drops the connection). */
+export async function disconnectCalendar(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const { disconnectGoogleCalendar } = await import("@/lib/calendar");
+  await disconnectGoogleCalendar(store.id);
+  revalidatePath("/app/settings");
+  return { ok: true };
+}
+
 export type PixelsInput = { metaPixelId?: string; metaCapiToken?: string; googleTagId?: string; tiktokPixelId?: string };
 
 /** Save the creator's own ad pixels. Pro-only. A blank CAPI token keeps the saved one when the pixel is unchanged. */

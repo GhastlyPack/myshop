@@ -43,6 +43,12 @@ const schema = z.object({
   STRIPE_BILLING_WEBHOOK_SECRET: z.string().optional(), // platform-account subscription endpoint (/api/webhooks/billing)
   STRIPE_UPGRADE_COUPON_ID: z.string().optional(), // early-bird discount applied when a creator upgrades to Pro during their trial
 
+  // Google Calendar OAuth (native bookings). If unset → the connect flow is hidden.
+  GOOGLE_CALENDAR_CLIENT_ID: z.string().optional(),
+  GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional(),
+  BOOKINGS_PUBLIC: z.coerce.boolean().optional(), // true → any Pro store can use bookings; false → beta allowlist only
+  BOOKINGS_BETA_USERNAMES: z.string().optional(), // comma-separated usernames allowed into the bookings beta
+
   // PayPal Commerce Platform (partner). If unset → hidden.
   PAYPAL_CLIENT_ID: z.string().optional(),
   PAYPAL_CLIENT_SECRET: z.string().optional(),
@@ -105,6 +111,7 @@ export const supabaseStorageConfigured = !s3Configured && Boolean(env.SUPABASE_U
 /** Which storage backend is active. */
 export const storageDriver: "s3" | "supabase" | "local" = s3Configured ? "s3" : supabaseStorageConfigured ? "supabase" : "local";
 export const resendConfigured = Boolean(env.RESEND_API_KEY);
+export const googleCalendarConfigured = Boolean(env.GOOGLE_CALENDAR_CLIENT_ID && env.GOOGLE_CALENDAR_CLIENT_SECRET);
 export const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_CONNECT_CLIENT_ID);
 /** Our own subscription billing: checkout/portal need only Stripe; the billing webhook also needs its signing secret. */
 export const billingConfigured = stripeConfigured && Boolean(env.STRIPE_BILLING_WEBHOOK_SECRET);
