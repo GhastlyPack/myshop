@@ -74,6 +74,37 @@ export async function updateProfile(input: ProfileInput): Promise<ProfileResult>
   return { ok: true };
 }
 
+const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+const availabilitySchema = z.object({
+  timezone: z.string().trim().min(1).max(64),
+  bufferMin: z.number().int().min(0).max(240),
+  minNoticeHours: z.number().int().min(0).max(720),
+  maxAdvanceDays: z.number().int().min(1).max(365),
+  weekly: z
+    .array(z.object({ day: z.number().int().min(0).max(6), start: z.string().regex(timeRe), end: z.string().regex(timeRe) }))
+    .max(21),
+});
+export type AvailabilityInput = z.input<typeof availabilitySchema>;
+
+/** Save the store's booking availability (open hours + rules). Pro + bookings beta. */
+export async function updateAvailability(input: AvailabilityInput): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  const { canUseBookings } = await import("@/lib/bookings-access");
+  if (!(await canUseBookings(store))) return { ok: false, error: "Bookings aren't available on your plan yet." };
+  const parsed = availabilitySchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your hours and try again." };
+  const d = parsed.data;
+  const weekly: Record<number, { start: string; end: string }[]> = {};
+  for (const w of d.weekly) {
+    if (w.end <= w.start) return { ok: false, error: "Each day's end time must be after its start time." };
+    (weekly[w.day] ??= []).push({ start: w.start, end: w.end });
+  }
+  await db.update(stores).set({ booking: { timezone: d.timezone, weekly, bufferMin: d.bufferMin, minNoticeHours: d.minNoticeHours, maxAdvanceDays: d.maxAdvanceDays } }).where(eq(stores.id, store.id));
+  revalidateStore(store.username);
+  revalidatePath("/app/settings");
+  return { ok: true };
+}
+
 /** Disconnect the store's Google Calendar (revokes the token and drops the connection). */
 export async function disconnectCalendar(): Promise<{ ok: true } | { ok: false; error: string }> {
   const { store } = await requireStore();

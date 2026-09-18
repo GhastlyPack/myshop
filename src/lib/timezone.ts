@@ -66,3 +66,11 @@ export function parseHhMm(s: string): number | null {
 export function zonedDateLabel(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric" }).format(date);
 }
+
+/** "Thursday, September 18, 2026 · 2:00 – 3:00 PM EDT" for a booking, in the given zone. */
+export function formatBookingWhen(start: Date, end: Date, timeZone: string): string {
+  const day = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(start);
+  const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" });
+  const tzName = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short" }).formatToParts(start).find((p) => p.type === "timeZoneName")?.value ?? "";
+  return `${day} · ${time.format(start)} – ${time.format(end)} ${tzName}`.trim();
+}

@@ -20,6 +20,7 @@ export function DetailsTab({
   bannerUrl,
   sections,
   currency,
+  canBook,
 }: TabProps & { thumbnailUrl: string | null; bannerUrl: string | null; sections: EditorSection[]; currency: string }) {
   const [slugTouched, setSlugTouched] = useState(Boolean(form.slug) && form.slug !== toSlug(form.title) && !form.slug.startsWith("untitled-"));
   const [priceText, setPriceText] = useState(centsToDollars(form.priceCents));
@@ -69,16 +70,30 @@ export function DetailsTab({
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Type" error={errors.type}>
-            <Select value={form.type} onValueChange={(v) => update({ type: v as "download" | "link" })}>
+            <Select
+              value={form.type}
+              onValueChange={(v) => {
+                const type = v as "download" | "link" | "booking";
+                // Booking products need a default call length; give one when switching in.
+                update(type === "booking" ? { type, durationMinutes: form.durationMinutes ?? 60 } : { type });
+              }}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="download">Digital download</SelectItem>
                 <SelectItem value="link">Link</SelectItem>
+                {(canBook || form.type === "booking") && <SelectItem value="booking">Booking (a call)</SelectItem>}
               </SelectContent>
             </Select>
-            <FieldHint>{form.type === "download" ? "Buyers get your files after checkout." : "Buyers are sent to a URL after checkout."}</FieldHint>
+            <FieldHint>
+              {form.type === "download"
+                ? "Buyers get your files after checkout."
+                : form.type === "link"
+                  ? "Buyers are sent to a URL after checkout."
+                  : "Buyers pick a time and it books onto your connected calendar. Set your open hours in Settings → Bookings."}
+            </FieldHint>
           </Field>
           <Field label="Price" htmlFor="price" error={priceError ?? errors.priceCents}>
             <div className="relative">
@@ -88,6 +103,26 @@ export function DetailsTab({
             <FieldHint>{form.priceCents > 0 ? "Connect Stripe in Settings to accept payments." : "Leave empty for a free product (collects name + email)."}</FieldHint>
           </Field>
         </div>
+
+        {form.type === "booking" && (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Call length" error={errors.durationMinutes}>
+              <Select value={String(form.durationMinutes ?? 60)} onValueChange={(v) => update({ durationMinutes: Number(v) })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[15, 30, 45, 60, 90, 120].map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      {m < 60 ? `${m} minutes` : m === 60 ? "1 hour" : m === 90 ? "1.5 hours" : `${m / 60} hours`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldHint>How long each call runs. Slots are generated back-to-back within your open hours.</FieldHint>
+            </Field>
+          </div>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Card style" error={errors.cardStyle}>

@@ -9,6 +9,7 @@ import { newId } from "@/lib/ids";
  * Mail abstraction. Resend when configured, else a dev outbox on disk that
  * /dev/outbox renders so you can click the links locally.
  */
+export type MailAttachment = { filename: string; content: string; contentType?: string };
 export type Mail = {
   to: string;
   subject: string;
@@ -16,6 +17,7 @@ export type Mail = {
   text?: string;
   replyTo?: string;
   from?: string;
+  attachments?: MailAttachment[];
 };
 
 const OUTBOX = path.join(process.cwd(), ".data", "outbox");
@@ -31,6 +33,9 @@ export async function sendMail(mail: Mail): Promise<{ id: string; driver: "resen
       html: mail.html,
       text: mail.text,
       replyTo: mail.replyTo,
+      ...(mail.attachments?.length
+        ? { attachments: mail.attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64"), contentType: a.contentType })) }
+        : {}),
     });
     if (res.error) throw new Error(`Resend: ${res.error.message}`);
     return { id: res.data?.id ?? "unknown", driver: "resend" };

@@ -1,6 +1,8 @@
+import type { BookingSettings } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AvailabilityForm } from "@/components/app/availability-form";
 import { CalendarDisconnect } from "@/components/app/calendar-disconnect";
 import { bookingsConfigured, inBookingsBeta } from "@/lib/bookings-access";
 import { getCalendarConnection } from "@/lib/calendar";
@@ -24,7 +26,7 @@ const CAL_ERROR: Record<string, string> = {
 };
 
 /** Settings → Bookings. Connect the creator's Google Calendar so paid calls land on it. Pro + beta. */
-export async function BookingsSettings({ store, error }: { store: { id: string; username: string }; error?: string | null }) {
+export async function BookingsSettings({ store, booking, error }: { store: { id: string; username: string }; booking: BookingSettings; error?: string | null }) {
   if (!bookingsConfigured()) {
     return (
       <Card className="border-dashed bg-muted/40">
@@ -55,12 +57,18 @@ export async function BookingsSettings({ store, error }: { store: { id: string; 
         {!beta ? (
           <p className="text-sm text-muted-foreground">Bookings are in private beta while we finish Google&apos;s review. We&apos;ll let you know when your account is in.</p>
         ) : conn ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Badge variant="default">Connected</Badge>
-              <span className="text-muted-foreground">{conn.email}</span>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="default">Connected</Badge>
+                <span className="text-muted-foreground">{conn.email}</span>
+              </div>
+              <CalendarDisconnect />
             </div>
-            <CalendarDisconnect />
+            <div>
+              <p className="mb-2 text-sm font-medium">Your open hours</p>
+              <AvailabilityForm initial={booking} />
+            </div>
           </div>
         ) : (
           <>

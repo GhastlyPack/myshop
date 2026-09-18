@@ -130,6 +130,7 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
         description: d.description || null,
         type: d.type,
         priceCents: d.priceCents,
+        durationMinutes: d.type === "booking" ? (d.durationMinutes ?? 60) : null,
         currency: store.currency,
         cardStyle: d.cardStyle,
         buttonText: d.buttonText,

@@ -1,0 +1,116 @@
+"use server";
+
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "@/db";
+import { orders } from "@/db/schema";
+import { resolvePlan } from "@/lib/billing";
+import { confirmBooking } from "@/lib/booking-confirm";
+import { getBookingSlots } from "@/lib/booking-slots";
+import { env } from "@/lib/env";
+import { newId } from "@/lib/ids";
+import { startPaidCheckout } from "@/lib/payments/checkout";
+import { getPublicProduct } from "@/lib/queries";
+import { sourceFromRequest } from "@/lib/track";
+
+const schema = z.object({
+  username: z.string().min(1).max(40),
+  slug: z.string().min(1).max(120),
+  name: z.string().trim().min(1, "Please enter your name").max(120),
+  email: z.string().trim().toLowerCase().email("Please enter a valid email").max(200),
+  slot: z.string().datetime({ offset: true }),
+  timezone: z.string().trim().max(64).optional(),
+  marketingOptIn: z.boolean().optional(),
+  sessionId: z.string().max(64).optional(),
+  pageUrl: z.string().max(2000).optional(),
+});
+
+export type BookResult = { ok: false; error: string };
+
+/** Book a call: re-check the slot, then confirm (free) or start Stripe checkout (paid). */
+export async function bookCall(input: z.input<typeof schema>): Promise<BookResult> {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the form." };
+  const { username, slug, name, email, timezone, marketingOptIn, pageUrl } = parsed.data;
+  const start = new Date(parsed.data.slot);
+
+  const data = await getPublicProduct(username, slug);
+  if (!data) return { ok: false, error: "This is no longer available." };
+  const { store, product } = data;
+  if (product.type !== "booking" || !product.durationMinutes) return { ok: false, error: "This isn't a booking." };
+
+  // Re-check the slot is still open against live calendar + existing bookings.
+  const open = await getBookingSlots(store, product);
+  if (!open.some((s) => s.getTime() === start.getTime())) return { ok: false, error: "That time was just taken. Please pick another." };
+
+  const h = await headers();
+  let source = {};
+  try {
+    source = sourceFromRequest(new URL(pageUrl ?? `/${username}/${slug}`, env.APP_BASE_URL), h.get("referer"));
+  } catch {}
+
+  const orderId = newId("ord");
+  const buyerTz = timezone || store.booking?.timezone || "America/New_York";
+  const optIn = product.marketingOptIn && Boolean(marketingOptIn);
+
+  // Free call: confirm immediately.
+  if (product.priceCents === 0) {
+    await db.insert(orders).values({
+      id: orderId,
+      storeId: store.id,
+      productId: product.id,
+      buyerEmail: email,
+      buyerName: name,
+      customFields: { __tz: buyerTz },
+      marketingOptIn: optIn,
+      amountCents: 0,
+      currency: product.currency,
+      provider: "free",
+      status: "paid",
+      bookingStartAt: start,
+      source,
+    });
+    await confirmBooking({ store, product, orderId, buyerName: name, buyerEmail: email, startAt: start, buyerTimezone: buyerTz });
+    redirect(`/${store.username}/${product.slug}/thanks?o=${orderId}`);
+  }
+
+  // Paid call: pending order carries the slot; the webhook confirms on payment.
+  const { feeBps } = await resolvePlan(store);
+  await db.insert(orders).values({
+    id: orderId,
+    storeId: store.id,
+    productId: product.id,
+    buyerEmail: email,
+    buyerName: name,
+    customFields: { __tz: buyerTz },
+    marketingOptIn: optIn,
+    amountCents: product.priceCents,
+    currency: product.currency,
+    provider: "stripe",
+    status: "pending",
+    bookingStartAt: start,
+    source,
+  });
+  const res = await startPaidCheckout({
+    orderId,
+    storeId: store.id,
+    productId: product.id,
+    amountCents: product.priceCents,
+    bump: null,
+    currency: product.currency,
+    buyerEmail: email,
+    buyerName: name,
+    title: product.title,
+    successUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}/thanks?o=${orderId}`,
+    cancelUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}`,
+    platformFeeBps: feeBps,
+  });
+  if (!res.ok) {
+    await db.update(orders).set({ status: "failed" }).where(eq(orders.id, orderId));
+    return { ok: false, error: res.error };
+  }
+  await db.update(orders).set({ provider: res.session.provider, providerRef: res.session.providerRef }).where(eq(orders.id, orderId));
+  redirect(res.session.redirectUrl);
+}

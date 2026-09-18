@@ -278,6 +278,8 @@ export const orders = pgTable(
     /** Total charged: product price − discount + bump. Income / analytics sum this column. */
     amountCents: integer("amount_cents").notNull().default(0),
     currency: text("currency").notNull().default("usd"),
+    bookingStartAt: timestamp("booking_start_at", { withTimezone: true }), // booking orders: the chosen slot, confirmed by the webhook on payment
+
     platformFeeCents: integer("platform_fee_cents").notNull().default(0),
     discountCode: text("discount_code"),
     discountCents: integer("discount_cents").notNull().default(0),

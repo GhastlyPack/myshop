@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entitlements, orders, paymentAccounts, productFiles, productLinks, products, stores } from "@/db/schema";
 import { recordSale } from "@/lib/commerce";
+import { confirmBooking } from "@/lib/booking-confirm";
 import { env } from "@/lib/env";
 import { sendDeliveryEmailProducts, type DeliveryItem } from "@/lib/free-checkout";
 import { capiPurchase, capiTargets } from "@/lib/meta";
@@ -89,6 +90,26 @@ export async function handleCheckoutPaid(session: Stripe.Checkout.Session, accou
     .where(and(eq(orders.id, order.id), ne(orders.status, "paid")))
     .returning();
   if (!updated) return { handled: true, action: "already_paid", orderId: order.id };
+
+  // Booking order: confirm the call (write to the calendar + email the invite) instead of file delivery.
+  if (order.bookingStartAt) {
+    const [store, product] = await Promise.all([
+      db.query.stores.findFirst({ where: eq(stores.id, order.storeId) }),
+      db.query.products.findFirst({ where: eq(products.id, order.productId) }),
+    ]);
+    await recordSale(order, store?.username);
+    if (store && product) {
+      const tz = typeof order.customFields?.__tz === "string" ? order.customFields.__tz : undefined;
+      await confirmBooking({ store, product, orderId: order.id, buyerName: order.buyerName, buyerEmail: order.buyerEmail, startAt: order.bookingStartAt, buyerTimezone: tz });
+      void capiPurchase(
+        { eventId: order.id, eventSourceUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}`, email: order.buyerEmail },
+        { productId: product.id, productName: product.title, amountCents: updated.amountCents, currency: updated.currency, orderId: order.id },
+        capiTargets(store.pixels),
+      );
+    }
+    await track({ storeId: order.storeId, productId: order.productId, type: "purchase", source: order.source });
+    return { handled: true, action: "paid", orderId: order.id };
+  }
 
   // One entitlement per product on the order: the main product plus the order bump, if any.
   const productIds = [order.productId, ...(order.bumpProductId && order.bumpProductId !== order.productId ? [order.bumpProductId] : [])];

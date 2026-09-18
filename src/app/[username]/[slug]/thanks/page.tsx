@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { ArrowUpRight, Download, Inbox } from "lucide-react";
 import { db } from "@/db";
-import { entitlements, orders, productFiles, productLinks, products, reviews, stores } from "@/db/schema";
+import { bookings, entitlements, orders, productFiles, productLinks, products, reviews, stores } from "@/db/schema";
 import { StoreFooter } from "@/components/storefront/footer";
 import { PendingPoll } from "@/components/storefront/pending-poll";
 import { StorePixelEvent } from "@/components/storefront/store-pixels";
@@ -15,6 +15,7 @@ import { ReviewForm } from "@/components/storefront/review-form";
 import { CompactStoreHeader } from "@/components/storefront/store-header";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { resolveTheme } from "@/lib/theme";
+import { formatBookingWhen } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your order", robots: { index: false } };
@@ -52,6 +53,52 @@ export default async function ThanksPage({ params, searchParams }: Props) {
   ]);
   if (!store || !product || store.username !== username.toLowerCase() || product.slug !== slug.toLowerCase()) notFound();
   const theme = resolveTheme(store.theme);
+
+  // Booking order: a call, not a download.
+  if (product.type === "booking") {
+    const booking = await db.query.bookings.findFirst({ where: eq(bookings.orderId, order.id) });
+    const pending = order.status === "pending" || !booking;
+    return (
+      <ThemeRoot theme={theme}>
+        <main className="mx-auto w-full max-w-[600px] px-4 pt-6 pb-6 sm:px-6 sm:pt-8">
+          <CompactStoreHeader store={store} theme={theme} />
+          {booking && order.amountCents > 0 && (
+            <StorePixelEvent
+              pixels={resolveStorePixels(store.pixels, env.META_PIXEL_ID)}
+              event="Purchase"
+              eventId={order.id}
+              data={{ contentIds: [product.id], contentName: product.title, currency: order.currency, value: order.amountCents / 100 }}
+            />
+          )}
+          <div className="mt-8 space-y-6">
+            <section className="sf-surface p-6 text-center sm:p-7">
+              {pending ? (
+                <>
+                  <h1 className="sf-heading text-[1.4rem]">Confirming your booking…</h1>
+                  <p className="sf-muted mt-2 text-[0.95rem]">This takes a moment. We&apos;ll email your calendar invite as soon as it&apos;s confirmed.</p>
+                  <PendingPoll email={order.buyerEmail} />
+                </>
+              ) : (
+                <>
+                  <h1 className="sf-heading text-[1.4rem]">You&apos;re booked</h1>
+                  <p className="sf-muted mt-2 text-[0.95rem]">
+                    {product.title} with {store.displayName}
+                  </p>
+                  <p className="mt-4 text-[1.05rem] font-semibold">{formatBookingWhen(booking!.startAt, booking!.endAt, booking!.timezone)}</p>
+                  {booking!.meetingUrl && (
+                    <a href={booking!.meetingUrl} target="_blank" rel="noreferrer" className="sf-btn mt-5 inline-flex">
+                      Join the call
+                    </a>
+                  )}
+                  <p className="sf-muted mt-5 text-sm">A calendar invite is on its way to {order.buyerEmail}.</p>
+                </>
+              )}
+            </section>
+          </div>
+        </main>
+      </ThemeRoot>
+    );
+  }
 
   const paid = order.status === "paid" && ent;
   const productIds = ents.map((e) => e.productId);

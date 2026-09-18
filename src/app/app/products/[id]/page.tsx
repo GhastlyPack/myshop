@@ -6,6 +6,7 @@ import { discountCodes, productFiles, productLinks, products, sections } from "@
 import { ProductEditor } from "@/components/app/product-editor/editor";
 import { requireStore } from "@/lib/auth";
 import { planTier } from "@/lib/billing";
+import { canUseBookings } from "@/lib/bookings-access";
 import { env } from "@/lib/env";
 import { publicUrl } from "@/lib/storage";
 
@@ -15,6 +16,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const { store } = await requireStore();
   const tier = await planTier(store);
+  const canBook = await canUseBookings(store);
   const product = await db.query.products.findFirst({ where: and(eq(products.id, id), eq(products.storeId, store.id), isNull(products.deletedAt)) });
   if (!product) notFound();
   const [files, links, secs, codes, bumpCandidates] = await Promise.all([
@@ -42,6 +44,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
         description: product.description ?? "",
         type: product.type,
         priceCents: product.priceCents,
+        durationMinutes: product.durationMinutes,
         cardStyle: product.cardStyle,
         buttonText: product.buttonText,
         thumbnailKey: product.thumbnailKey,
@@ -81,6 +84,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
       store={{ username: store.username, currency: store.currency }}
       baseUrl={env.APP_BASE_URL}
       tier={tier}
+      canBook={canBook}
     />
   );
 }

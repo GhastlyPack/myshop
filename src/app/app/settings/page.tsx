@@ -83,7 +83,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <p className="text-xs text-muted-foreground">Sell calls that book onto your calendar. Connect Google Calendar so your busy times block your open hours and each booking gets a Meet link.</p>
         </div>
         {tier === "pro" ? (
-          <BookingsSettings store={{ id: store.id, username: store.username }} error={cal_error ?? null} />
+          <BookingsSettings store={{ id: store.id, username: store.username }} booking={store.booking} error={cal_error ?? null} />
         ) : (
           <ProLock feature="bookings" title="Booking calls" description="Sell hour-long calls that book straight onto your connected calendar, with an automatic Meet link. Available on Pro." />
         )}

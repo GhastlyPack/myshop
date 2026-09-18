@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Markdown from "react-markdown";
 import { ArrowUpRight } from "lucide-react";
 import { CheckoutForm, type BumpOffer } from "@/components/storefront/checkout-form";
+import { BookingArea } from "@/components/storefront/booking-area";
 import { StoreFooter } from "@/components/storefront/footer";
 import { StickyBuyBar } from "@/components/storefront/sticky-buy-bar";
 import { Collapsible } from "@/components/storefront/collapsible";
@@ -204,7 +205,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </article>
 
         <section className="sf-surface sf-rise mt-8 p-5 sm:p-7" style={{ animationDelay: "120ms" }} id="checkout">
-          {isLink ? (
+          {product.type === "booking" ? (
+            <BookingArea store={store} product={product} />
+          ) : isLink ? (
             <div className="space-y-3">
               {links.map((l) => (
                 <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="sf-btn w-full text-base">

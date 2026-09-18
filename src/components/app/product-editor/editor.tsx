@@ -25,6 +25,7 @@ export type TabProps = {
   form: ProductInput;
   update: (patch: Partial<ProductInput>) => void;
   errors: Errors;
+  canBook?: boolean;
 };
 
 const TAB_FOR_ERROR: Record<string, string> = {
@@ -55,6 +56,7 @@ export function ProductEditor({
   bumpCandidates,
   discountCodes,
   tier,
+  canBook,
 }: {
   product: EditorProduct;
   thumbnailUrl: string | null;
@@ -68,6 +70,7 @@ export function ProductEditor({
   bumpCandidates: BumpCandidate[];
   discountCodes: DiscountCodeRow[];
   tier: "basic" | "pro";
+  canBook?: boolean;
 }) {
   const router = useRouter();
   const { id, status: initialStatus, ...rest } = product;
@@ -176,7 +179,7 @@ export function ProductEditor({
           <TabsTrigger value="options">Options</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="pt-4">
-          <DetailsTab form={form} update={update} errors={errors} thumbnailUrl={thumbnailUrl} bannerUrl={bannerUrl} sections={sections} currency={store.currency} />
+          <DetailsTab form={form} update={update} errors={errors} thumbnailUrl={thumbnailUrl} bannerUrl={bannerUrl} sections={sections} currency={store.currency} canBook={canBook} />
         </TabsContent>
         <TabsContent value="content" className="pt-4">
           <ContentTab form={form} update={update} errors={errors} productId={id} files={files} setFiles={setFiles} />
