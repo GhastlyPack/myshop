@@ -245,7 +245,7 @@ export async function handleWebhook(body: WebhookBody) {
     const store = await db.query.stores.findFirst({ where: eq(stores.id, acct.storeId) });
     if (!store || !store.published) continue;
     const candidates = await db
-      .select({ id: products.id, dmKeyword: products.dmKeyword, title: products.title, slug: products.slug, dmReplyText: products.dmReplyText, subtitle: products.subtitle, thumbnailKey: products.thumbnailKey, priceCents: products.priceCents, currency: products.currency })
+      .select({ id: products.id, dmKeyword: products.dmKeyword, title: products.title, slug: products.slug, dmReplyText: products.dmReplyText, subtitle: products.subtitle, thumbnailKey: products.thumbnailKey, priceCents: products.priceCents, currency: products.currency, buttonText: products.buttonText })
       .from(products)
       .where(and(eq(products.storeId, store.id), eq(products.status, "published"), isNull(products.deletedAt)));
     const token = await refreshIfNeeded(acct);
@@ -300,7 +300,14 @@ export async function handleWebhook(body: WebhookBody) {
   return { handled };
 }
 
-type CardProduct = Pick<Product, "title" | "subtitle" | "thumbnailKey" | "priceCents" | "currency">;
+type CardProduct = Pick<Product, "title" | "subtitle" | "thumbnailKey" | "priceCents" | "currency" | "buttonText">;
+
+/** The card button mirrors the product's own CTA; only the stock "Get it" gets the free/paid default. Meta caps titles at 20 chars. */
+function cardButton(p: Pick<Product, "buttonText" | "priceCents">): string {
+  const custom = (p.buttonText ?? "").trim();
+  if (custom && custom !== "Get it") return custom.slice(0, 20);
+  return p.priceCents === 0 ? "Get it free" : "Get it";
+}
 function priceLabel(p: CardProduct) {
   if (p.priceCents === 0) return "Free";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency.toUpperCase(), minimumFractionDigits: p.priceCents % 100 === 0 ? 0 : 2 }).format(p.priceCents / 100);
@@ -316,7 +323,7 @@ async function sendCard(igUserId: string, token: string, recipientId: string, pr
       subtitle: [priceLabel(product), product.subtitle].filter(Boolean).join(" · "),
       imageUrl,
       url: plan.link,
-      button: product.priceCents === 0 ? "Get it free" : "Get it",
+      button: cardButton(product),
     });
   } catch (e) {
     console.error("[instagram] template rejected, sending link", e);
