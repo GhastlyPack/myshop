@@ -27,6 +27,7 @@ const FEATURES = [
   ["A library for your buyers", "Everything they’ve ever bought, from every creator, behind one magic link at visitmy.shop/me."],
   ["Analytics", "Views, clicks per card, conversions, and where the traffic came from. Meta, Google, and TikTok pixels on Pro."],
   ["Instagram DM keyword", "Give a product a keyword and get the caption, the auto-reply, and the story CTA, ready to paste. Auto-replies on Pro."],
+  ["Booking calls", "Sell a 60-minute call. Buyers pick a time from your open hours and pay; it lands on your Google Calendar with a Meet link. DM “consult” and the booking link goes out automatically. On Pro."],
 ];
 
 export default async function Home() {
@@ -156,7 +157,7 @@ export default async function Home() {
               <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">Start at $9. Keep up to 100%.</h2>
               <p className="ld-muted mt-5 text-lg leading-relaxed">
                 Basic is ${PLANS[0].monthly} a month and keeps 95% of each sale. Pro is ${PLANS[1].monthly} a month with a 0% fee, the full design editor,
-                Instagram auto-replies, and pixels. Stan charges ${COMPETITORS.stan.entry} and ${COMPETITORS.stan.top}. Every account starts with 7 days of Pro.
+                booking calls, Instagram auto-replies, and pixels. Stan charges ${COMPETITORS.stan.entry} and ${COMPETITORS.stan.top}. Every account starts with 7 days of Pro.
               </p>
               <Link href="/pricing" className="ld-btn ld-btn-primary mt-8">
                 See pricing

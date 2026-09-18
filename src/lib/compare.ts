@@ -13,10 +13,10 @@ export const COMPETITORS: Record<CompetitorKey, { name: string; slug: string; lo
     logo: "/landing/logos/stan.png",
     price: "$29 or $99 a month",
     fee: "0%",
-    verdict: "The best-known creator store. Strong on courses and bookings, weak on design and checkout.",
-    bestFor: "Coaches selling courses, memberships, and calendar bookings today.",
+    verdict: "The best-known creator store. Strong on courses and memberships, weak on design and checkout, and bookings cost $99.",
+    bestFor: "Coaches selling courses and memberships today.",
     strengths: ["Courses, memberships, webinars, and bookings on paid plans", "Email broadcasts and an affiliate program on Pro", "Large creator community and lots of tutorials"],
-    gaps: ["Every store gets a theme and two colors, so they all look alike", "Product URLs get a forced numeric suffix", "A free download asks for a full mailing address, two checkboxes, and a reCAPTCHA", "Pixel tracking and branding removal cost $99 a month", "No buyer download library"],
+    gaps: ["Every store gets a theme and two colors, so they all look alike", "Product URLs get a forced numeric suffix", "A free download asks for a full mailing address, two checkboxes, and a reCAPTCHA", "Pixel tracking, branding removal, and booking calls cost $99 a month", "No buyer download library"],
   },
   linktree: {
     name: "Linktree",
@@ -70,7 +70,8 @@ export const MATRIX: MatrixRow[] = [
   { label: "Pixel tracking", us: "Pro", stan: "$99 plan", linktree: "Paid plans", beacons: "Paid plans", gumroad: "Yes" },
   { label: "Instagram keyword replies", us: "Pro", stan: "AutoDM", linktree: "No", beacons: "Some", gumroad: "No" },
   { label: "Discount codes, bumps, limits", us: "Pro", stan: "Paid plans", linktree: "Some", beacons: "Some", gumroad: "Discounts" },
-  { label: "Courses, memberships, bookings", us: "Coming soon", stan: "Yes", linktree: "No", beacons: "Some", gumroad: "Memberships" },
+  { label: "Booking calls", us: "Pro ($49): Google Calendar + Meet", stan: "$99 plan", linktree: "No", beacons: "No", gumroad: "No" },
+  { label: "Courses, memberships", us: "Coming soon", stan: "Yes", linktree: "No", beacons: "Some", gumroad: "Memberships" },
 ];
 
 export const COMPARED_ON = "September 2026";

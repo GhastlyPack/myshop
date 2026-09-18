@@ -21,7 +21,8 @@ const ROWS: [string, string, string][] = [
   ["Remove platform branding", "Pro ($49)", "$99 plan"],
   ["Instagram DM keyword", "Per product with custom reply text, on Pro", "AutoDM, keyword to one message"],
   ["Discount codes, order bumps, limited quantity", "Pro", "Paid plans, one bump on Pro"],
-  ["Courses, memberships, bookings", "Coming soon", "Yes, on paid plans"],
+  ["Booking calls", "Pro ($49): Google Calendar, auto Meet link, invites both ways", "$99 plan"],
+  ["Courses, memberships", "Coming soon", "Yes, on paid plans"],
 ];
 
 export default function StanComparePage() {
@@ -29,7 +30,7 @@ export default function StanComparePage() {
     <MarketingShell>
       <Article
         title="visitmy.shop vs Stan store."
-        intro="Stan is the best-known creator store and it earns that. If you sell courses, memberships, or bookings today, it does things we do not yet. If you sell digital products from your bio, read on."
+        intro="Stan is the best-known creator store and it earns that. If you sell courses or memberships today, it does things we do not yet. If you sell digital products from your bio, read on."
         updated="September 2026"
       >
         <table>
@@ -53,8 +54,8 @@ export default function StanComparePage() {
 
         <h2>Where Stan is stronger</h2>
         <p>
-          Stan sells courses, memberships, webinars, and calendar bookings, with email broadcasts and an affiliate program on its Pro plan. If those are
-          your business, Stan is the more complete tool today. We are building toward courses, bookings, and communities, but they are not here yet.
+          Stan sells courses, memberships, and webinars, with email broadcasts and an affiliate program on its Pro plan. If those are your business, Stan
+          is the more complete tool today. We are building toward courses, memberships, and an affiliate program, but they are not here yet.
         </p>
 
         <h2>Where visitmy.shop is stronger</h2>
@@ -81,6 +82,13 @@ export default function StanComparePage() {
         <p>
           Every buyer gets a magic-link library at visitmy.shop/me with everything they have ever bought, from every creator on the platform. No more
           digging through email for a file from six months ago.
+        </p>
+        <h3>Booking calls at half the price</h3>
+        <p>
+          Sell a call the way you sell a file. Buyers pick a time from your open hours, pay through Stripe, and the call lands on your Google Calendar
+          with a Google Meet link already attached. Busy times block availability, so no double-booking; both sides get a branded confirmation with a
+          calendar invite; buyers see times in their own timezone. Free discovery calls and paid calls both work, and you can attach a prep doc that ships
+          with the confirmation. Stan puts booking calls on its $99 plan. Ours are on Pro at $49.
         </p>
         <h3>Pixel tracking at half the price</h3>
         <p>Meta, Google, and TikTok pixels come with Pro at $49. Stan reserves pixel tracking for its $99 plan.</p>

@@ -38,6 +38,7 @@ export const PLANS: Plan[] = [
     features: [
       "Full design editor: fonts, colors, layout",
       "Remove visitmy.shop branding",
+      "Booking calls with Google Calendar + Meet",
       "Instagram keyword auto-replies",
       "Discount codes, order bumps, limited quantity",
       "Custom checkout fields",
@@ -48,7 +49,7 @@ export const PLANS: Plan[] = [
 ];
 
 /** Planned for Pro, not shipped. Always labelled coming soon. */
-export const ROADMAP = ["Memberships and community access", "Courses", "Bookings", "Affiliate program"];
+export const ROADMAP = ["Memberships and community access", "Courses", "Affiliate program"];
 
 /** Competitor list prices, quoted on the lander, /pricing, and the compare pages. Checked September 2026. */
 export const COMPETITORS = {

@@ -36,7 +36,7 @@ export default async function PricingPage() {
           <h2>Cut Stan in half, keep 100% of your sales</h2>
           <p>
             Stan charges $29 a month to start and $99 a month for its top plan. visitmy.shop is $9 and $49: a third of their entry price and half their
-            top price, with a full design editor, buyer download library, and reviews, and a 0% fee on Pro. See the{" "}
+            top price, with a full design editor, booking calls with Google Calendar and Meet, a buyer download library, reviews, and a 0% fee on Pro. Stan sells booking calls on its $99 tier; ours are on Pro at $49. See the{" "}
             <Link href="/compare/stan-store">Stan store comparison</Link>.
           </p>
           <h2>Questions</h2>

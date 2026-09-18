@@ -9,6 +9,13 @@ export const metadata: Metadata = {
 
 const ENTRIES: { date: string; items: string[] }[] = [
   {
+    date: "September 18, 2026",
+    items: [
+      "Booking calls on Pro. Sell a call like a file: buyers pick a time from your open hours in their own timezone, pay through Stripe, and the call lands on your Google Calendar with a Google Meet link. Busy times block availability, both sides get a branded confirmation with a calendar invite, free and paid calls both work, and you can attach a prep doc that ships with the confirmation.",
+      "Instagram auto-replies can send a booking link: DM a keyword like “consult” and the link goes out automatically.",
+    ],
+  },
+  {
     date: "September 17, 2026",
     items: [
       "Google sign-in and Google Analytics.",

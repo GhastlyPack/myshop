@@ -96,8 +96,8 @@ export default function ComparePage() {
         <div className="ld-prose mt-20 max-w-3xl">
           <h2>How to choose</h2>
           <p>
-            <strong>If you sell courses, memberships, or bookings today</strong>, Stan is the more complete tool and we say so on its page. Ours are coming
-            soon, not shipped.
+            <strong>If you sell courses or memberships today</strong>, Stan is the more complete tool and we say so on its page. Ours are coming soon, not
+            shipped. Booking calls are live on our Pro plan at $49; Stan sells them on its $99 tier.
           </p>
           <p>
             <strong>If you only need a page of links</strong>, Linktree or Beacons are fine and free. The moment you want to sell a file from that page, you
