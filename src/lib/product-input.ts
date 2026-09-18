@@ -24,6 +24,8 @@ export const productInputSchema = z.object({
   priceCents: z.number().int().min(0).max(100_000_000, "That price is too high."),
   /** Booking products: call length in minutes. Null for non-booking products. */
   durationMinutes: z.number().int().min(5).max(600).nullable().default(null),
+  /** Booking products: plain-text agenda pushed to the calendar event and invite. Required to publish a booking. */
+  meetingDescription: z.string().trim().max(2000, "Keep the meeting description under 2000 characters.").default(""),
   cardStyle: z.enum(["button", "callout", "preview"]),
   buttonText: z.string().trim().min(1, "Add button text.").max(40, "Keep button text short."),
   thumbnailKey: z.string().nullable(),

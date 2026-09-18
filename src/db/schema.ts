@@ -161,6 +161,7 @@ export const products = pgTable(
     title: text("title").notNull(),
     subtitle: text("subtitle"),
     description: text("description"), // markdown
+    meetingDescription: text("meeting_description"), // booking products: plain text pushed to the calendar event + invite (not the sales copy)
     thumbnailKey: text("thumbnail_key"),
     bannerKey: text("banner_key"),
     cardStyle: cardStyle("card_style").notNull().default("callout"),

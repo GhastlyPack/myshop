@@ -46,6 +46,7 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
         type: product.type,
         priceCents: product.priceCents,
         durationMinutes: product.durationMinutes,
+        meetingDescription: product.meetingDescription ?? "",
         cardStyle: product.cardStyle,
         buttonText: product.buttonText,
         thumbnailKey: product.thumbnailKey,

@@ -41,6 +41,7 @@ const TAB_FOR_ERROR: Record<string, string> = {
   bumpProductId: "checkout",
   bumpHeadline: "checkout",
   bumpDiscountPercent: "checkout",
+  meetingDescription: "details",
   dmKeyword: "options",
   dmReplyText: "options",
   listed: "options",

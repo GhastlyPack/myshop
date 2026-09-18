@@ -96,6 +96,8 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
       // Only link products need a link. Bookings deliver a call; files/links on them are optional pre-call materials.
       errors.links = "Add at least one link before publishing.";
     }
+    // A booking's calendar invite needs its own plain-text agenda; the sales description is markdown and shouldn't go on the event.
+    if (d.type === "booking" && !d.meetingDescription?.trim()) errors.meetingDescription = "Add a meeting description before publishing — it goes on the calendar invite.";
     if (Object.keys(errors).length === 0) status = "published";
   } else if (intent === "unpublish") {
     status = "draft";
@@ -132,6 +134,7 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
         type: d.type,
         priceCents: d.priceCents,
         durationMinutes: d.type === "booking" ? (d.durationMinutes ?? 60) : null,
+        meetingDescription: d.type === "booking" ? d.meetingDescription || null : null,
         currency: store.currency,
         cardStyle: d.cardStyle,
         buttonText: d.buttonText,

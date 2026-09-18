@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "meeting_description" text;

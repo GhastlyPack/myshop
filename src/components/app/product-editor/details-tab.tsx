@@ -57,6 +57,18 @@ export function DetailsTab({ form, update, errors, sections, currency, canBook }
           <Textarea id="description" value={form.description} onChange={(e) => update({ description: e.target.value })} rows={8} placeholder="What is inside, who it is for, what they get." />
           <FieldHint>Markdown works: **bold**, *italic*, - lists, [links](https://...).</FieldHint>
         </Field>
+        {form.type === "booking" && (
+          <Field label="Meeting description" htmlFor="meetingDescription" error={errors.meetingDescription}>
+            <Textarea
+              id="meetingDescription"
+              value={form.meetingDescription ?? ""}
+              onChange={(e) => update({ meetingDescription: e.target.value })}
+              rows={4}
+              placeholder="What we'll cover, and anything to have ready. This is what shows on the calendar invite."
+            />
+            <FieldHint>Plain text, no markdown. Goes on the calendar event and the invite for both of you — separate from the sales description above. Required to publish.</FieldHint>
+          </Field>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Type" error={errors.type}>

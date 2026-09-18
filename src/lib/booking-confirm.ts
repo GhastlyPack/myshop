@@ -36,6 +36,9 @@ export async function confirmBooking(opts: {
   const endAt = new Date(startAt.getTime() + duration * 60_000);
   const creatorTz = store.booking?.timezone ?? DEFAULT_BOOKING_SETTINGS.timezone;
   const buyerTz = opts.buyerTimezone || creatorTz;
+  // The invite carries the dedicated plain-text meeting description, never the markdown sales copy.
+  // Bookings published before this field existed fall back to a clean one-liner.
+  const meetingText = product.meetingDescription?.trim() || `${product.title} with ${store.displayName}`;
 
   // Write to the creator's calendar first (gives us the Meet link). Best-effort.
   let googleEventId: string | null = null;
@@ -43,7 +46,7 @@ export async function confirmBooking(opts: {
   try {
     const ev = await createCalendarEvent(store.id, {
       summary: `${product.title} — ${buyerName}`,
-      description: product.description ?? undefined,
+      description: meetingText,
       start: startAt,
       end: endAt,
       timezone: creatorTz,
@@ -108,7 +111,7 @@ export async function confirmBooking(opts: {
       start: startAt,
       end: endAt,
       title: `${product.title} with ${store.displayName}`,
-      description: meetingUrl ? `Join: ${meetingUrl}` : product.description ?? undefined,
+      description: meetingUrl ? `${meetingText}\n\nJoin: ${meetingUrl}` : meetingText,
       location: meetingUrl ?? undefined,
       organizerName: store.displayName,
       organizerEmail: owner?.email ?? env.EMAIL_FROM,
