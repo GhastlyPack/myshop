@@ -53,7 +53,7 @@ export function PlanCards({ ctaHref }: { ctaHref: string }) {
 
               <div className="mt-auto pt-9">
                 <Link href={ctaHref} className={`ld-btn w-full ${dark ? "ld-btn-primary" : "ld-btn-ink"}`}>
-                  Start free trial
+                  Claim your link
                 </Link>
                 <p className={`mt-3 text-center text-xs ${muted}`}>{TRIAL}</p>
               </div>
