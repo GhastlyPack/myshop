@@ -18,7 +18,9 @@ import { absoluteUrl } from "@/lib/site";
 import type { Product } from "@/db/schema";
 import { ThemeRoot } from "@/components/storefront/theme-root";
 import { TrackView } from "@/components/storefront/track-view";
-import { PixelEvent } from "@/components/storefront/pixel-event";
+import { StorePixelEvent } from "@/components/storefront/store-pixels";
+import { resolveStorePixels } from "@/lib/pixels";
+import { env } from "@/lib/env";
 import { bumpPrice, defaultBumpHeadline, isSoldOut, LOW_STOCK_AT, remainingUnits } from "@/lib/commerce";
 import { findProductByPreviousSlug, getPublicProduct, getPublicStoreTagged } from "@/lib/queries";
 import { planTier } from "@/lib/billing";
@@ -56,6 +58,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);
   // "Remove branding" is a Pro feature: Basic stores always show the footer credit.
   if ((await planTier(store)) === "basic") theme.showBranding = true;
+  const pixels = resolveStorePixels(store.pixels, env.META_PIXEL_ID);
   const remaining = remainingUnits(product);
   const soldOut = isSoldOut(product);
   const bumpOffer: BumpOffer | null =
@@ -138,9 +141,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
         <GaEvent name="view_item" params={{ store: store.username, currency: product.currency.toUpperCase(), value: product.priceCents / 100, is_free: product.priceCents === 0, items: [gaItem(product)] }} />
       )}
       {!isPreview && (
-        <PixelEvent
+        <StorePixelEvent
+          pixels={pixels}
           event="ViewContent"
-          params={{ content_ids: [product.id], content_name: product.title, content_type: "product", currency: product.currency, value: product.priceCents / 100 }}
+          data={{ contentIds: [product.id], contentName: product.title, currency: product.currency, value: product.priceCents / 100 }}
         />
       )}
       <main className="mx-auto w-full max-w-[640px] px-4 pt-6 pb-6 sm:px-6 sm:pt-8">
@@ -230,6 +234,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 buttonText={product.buttonText}
                 fields={product.fields}
                 marketingOptIn={product.marketingOptIn}
+                pixels={pixels}
                 bump={bumpOffer}
               />
             </>

@@ -61,6 +61,18 @@ export type TrafficSource = {
   referrer?: string;
 };
 
+/**
+ * A creator's own ad pixels, fired on their storefront so their Meta/Google/TikTok
+ * campaigns can optimize on and retarget their traffic. Each provider is optional.
+ * `capiToken` (Meta) enables server-side Conversions API, deduped with the browser
+ * pixel by event id. Stored per store; a Pro feature.
+ */
+export type StorePixels = {
+  meta?: { pixelId?: string; capiToken?: string };
+  google?: { tagId?: string };
+  tiktok?: { pixelId?: string };
+};
+
 // ---------- tables ----------
 export const users = pgTable(
   "users",
@@ -90,6 +102,7 @@ export const stores = pgTable(
     avatarKey: text("avatar_key"),
     socials: jsonb("socials").$type<SocialLinks>().notNull().default({}),
     theme: jsonb("theme").$type<Theme>().notNull().default(sql`'{}'::jsonb`),
+    pixels: jsonb("pixels").$type<StorePixels>().notNull().default({}),
     currency: text("currency").notNull().default("usd"),
     published: boolean("published").notNull().default(true),
     // platform billing — unused until Commas / app fees land

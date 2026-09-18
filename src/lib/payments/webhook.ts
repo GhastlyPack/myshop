@@ -6,7 +6,7 @@ import { entitlements, orders, paymentAccounts, productFiles, productLinks, prod
 import { recordSale } from "@/lib/commerce";
 import { env } from "@/lib/env";
 import { sendDeliveryEmailProducts, type DeliveryItem } from "@/lib/free-checkout";
-import { capiPurchase } from "@/lib/meta";
+import { capiPurchase, capiTargets } from "@/lib/meta";
 import { newId, newToken } from "@/lib/ids";
 import { track } from "@/lib/track";
 import { getStripe } from "./stripe";
@@ -136,6 +136,7 @@ export async function handleCheckoutPaid(session: Stripe.Checkout.Session, accou
     void capiPurchase(
       { eventId: order.id, eventSourceUrl: `${env.APP_BASE_URL}/${store.username}/${product.slug}`, email: order.buyerEmail },
       { productId: product.id, productName: product.title, amountCents: updated.amountCents, currency: updated.currency, orderId: order.id },
+      capiTargets(store.pixels),
     );
   }
 

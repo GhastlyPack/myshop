@@ -7,8 +7,9 @@ import { z } from "zod";
 import { db } from "@/db";
 import { instagramAccounts, instagramBetaRequests, productFiles, products, stores, type SocialLinks } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
-import { storeHasBilling } from "@/lib/billing";
+import { planTier, storeHasBilling } from "@/lib/billing";
 import { CURRENCIES } from "@/lib/format";
+import { pixelsInputSchema } from "@/lib/pixels";
 import { newId } from "@/lib/ids";
 import { revalidateStore } from "@/lib/queries";
 import { normalizeUsername, usernameError } from "@/lib/reserved";
@@ -69,6 +70,26 @@ export async function updateProfile(input: ProfileInput): Promise<ProfileResult>
 
   revalidateStore(store.username);
   revalidatePath("/app");
+  revalidatePath("/app/settings");
+  return { ok: true };
+}
+
+export type PixelsInput = { metaPixelId?: string; metaCapiToken?: string; googleTagId?: string; tiktokPixelId?: string };
+
+/** Save the creator's own ad pixels. Pro-only. A blank CAPI token keeps the saved one when the pixel is unchanged. */
+export async function updatePixels(input: PixelsInput): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { store } = await requireStore();
+  if ((await planTier(store)) !== "pro") return { ok: false, error: "Pixel tracking is a Pro feature." };
+  const parsed = pixelsInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your pixel IDs and try again." };
+  const next = parsed.data;
+  // Keep the existing Conversions API token if the form left it blank and the pixel id is unchanged.
+  const prev = store.pixels;
+  if (next.meta?.pixelId && !next.meta.capiToken && prev?.meta?.capiToken && prev.meta.pixelId === next.meta.pixelId) {
+    next.meta.capiToken = prev.meta.capiToken;
+  }
+  await db.update(stores).set({ pixels: next }).where(eq(stores.id, store.id));
+  revalidateStore(store.username);
   revalidatePath("/app/settings");
   return { ok: true };
 }

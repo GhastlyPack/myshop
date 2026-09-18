@@ -4,6 +4,7 @@ import { ChangeUsernameForm } from "@/components/app/change-username-form";
 import { DeleteStoreDialog } from "@/components/app/delete-store-dialog";
 import { InstagramSettings } from "@/components/app/instagram-settings";
 import { PaymentsSettings } from "@/components/app/payments-settings";
+import { PixelsForm } from "@/components/app/pixels-form";
 import { ProLock } from "@/components/app/pro-lock";
 import { SettingsForm } from "@/components/app/settings-form";
 import { StorePublishToggle } from "@/components/app/store-publish-toggle";
@@ -11,6 +12,7 @@ import { requireStore } from "@/lib/auth";
 import { planTier } from "@/lib/billing";
 import { env } from "@/lib/env";
 import { CURRENCIES } from "@/lib/format";
+import { pixelsToForm } from "@/lib/pixels";
 import { publicUrl } from "@/lib/storage";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -71,6 +73,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <InstagramSettings storeId={store.id} error={ig_error ?? null} />
         ) : (
           <ProLock feature="instagram" title="Instagram auto-replies" description="Auto-DM your product link when someone comments or DMs a keyword. Available on Pro." />
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold">Pixels &amp; tracking</h2>
+          <p className="text-xs text-muted-foreground">Fire your own Meta, Google and TikTok pixels on your storefront so your ad campaigns optimize on your traffic.</p>
+        </div>
+        {tier === "pro" ? (
+          <PixelsForm initial={pixelsToForm(store.pixels)} />
+        ) : (
+          <ProLock feature="pixels" title="Ad pixels" description="Connect your own Meta, Google and TikTok pixels so your campaigns optimize and retarget on your storefront traffic. Available on Pro." />
         )}
       </section>
 

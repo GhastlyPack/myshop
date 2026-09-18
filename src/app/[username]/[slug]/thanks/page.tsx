@@ -7,7 +7,9 @@ import { db } from "@/db";
 import { entitlements, orders, productFiles, productLinks, products, reviews, stores } from "@/db/schema";
 import { StoreFooter } from "@/components/storefront/footer";
 import { PendingPoll } from "@/components/storefront/pending-poll";
-import { PixelEvent } from "@/components/storefront/pixel-event";
+import { StorePixelEvent } from "@/components/storefront/store-pixels";
+import { resolveStorePixels } from "@/lib/pixels";
+import { env } from "@/lib/env";
 import { GaEvent } from "@/components/analytics/ga-event";
 import { ReviewForm } from "@/components/storefront/review-form";
 import { CompactStoreHeader } from "@/components/storefront/store-header";
@@ -91,10 +93,11 @@ export default async function ThanksPage({ params, searchParams }: Props) {
             />
           )}
           {paid && (
-            <PixelEvent
+            <StorePixelEvent
+              pixels={resolveStorePixels(store.pixels, env.META_PIXEL_ID)}
               event={order.amountCents === 0 ? "Lead" : "Purchase"}
               eventId={order.id}
-              params={{ content_ids: productIds, content_name: product.title, content_type: "product", currency: order.currency, value: order.amountCents / 100 }}
+              data={{ contentIds: productIds, contentName: product.title, currency: order.currency, value: order.amountCents / 100 }}
             />
           )}
           {(order.status === "failed" || order.status === "refunded") && (

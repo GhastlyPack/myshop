@@ -6,7 +6,8 @@ import type { CustomField } from "@/db/schema";
 import { applyDiscountAction, checkoutAction, type CheckoutState } from "@/app/[username]/[slug]/actions";
 import { formatPrice } from "./price";
 import { sendBeacon, usePageUrl, useSessionId } from "./session";
-import { trackPixel } from "@/components/meta-pixel";
+import { fireStorePixel } from "@/components/storefront/store-pixels";
+import type { ResolvedPixels } from "@/lib/pixels";
 import { ga } from "@/lib/ga";
 
 type Props = {
@@ -20,6 +21,8 @@ type Props = {
   buttonText: string;
   fields: CustomField[];
   marketingOptIn: boolean;
+  /** The creator's ad pixels, for the InitiateCheckout event. */
+  pixels: ResolvedPixels;
   /** Order bump offered above the pay button (paid products only). */
   bump?: BumpOffer | null;
 };
@@ -187,7 +190,7 @@ export function CheckoutForm(p: Props) {
       action={action}
       onSubmit={() => {
         sendBeacon({ storeId: p.storeId, productId: p.productId, type: "checkout_start" });
-        trackPixel("InitiateCheckout", { content_ids: [p.productId, ...(p.bump && bumpOn ? [p.bump.productId] : [])], currency: p.currency, value: total / 100 });
+        fireStorePixel(p.pixels, "InitiateCheckout", { contentIds: [p.productId, ...(p.bump && bumpOn ? [p.bump.productId] : [])], currency: p.currency, value: total / 100 });
         ga("begin_checkout", {
           store: p.username,
           currency: p.currency.toUpperCase(),

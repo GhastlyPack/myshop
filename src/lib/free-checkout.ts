@@ -6,7 +6,7 @@ import { recordSale } from "@/lib/commerce";
 import { env } from "@/lib/env";
 import { newId, newToken } from "@/lib/ids";
 import { sendMail } from "@/lib/mailer";
-import { capiLead } from "@/lib/meta";
+import { capiLead, capiTargets } from "@/lib/meta";
 import { track } from "@/lib/track";
 
 /**
@@ -89,6 +89,7 @@ export async function claimFreeProduct(input: ClaimInput): Promise<ClaimResult> 
   void capiLead(
     { eventId: orderId, eventSourceUrl: input.pageUrl ?? `${env.APP_BASE_URL}/${store.username}/${product.slug}`, email, ip: input.ip ?? undefined, userAgent: input.userAgent ?? undefined },
     { productId: product.id, productName: product.title, currency: product.currency },
+    capiTargets(store.pixels),
   );
   return { ok: true, token };
 }

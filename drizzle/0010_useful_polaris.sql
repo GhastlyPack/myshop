@@ -1,0 +1,1 @@
+ALTER TABLE "stores" ADD COLUMN "pixels" jsonb DEFAULT '{}'::jsonb NOT NULL;
