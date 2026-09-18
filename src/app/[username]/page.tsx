@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { StoreFooter } from "@/components/storefront/footer";
 import { resolveStoreTheme } from "@/components/storefront/preview-theme";
 import { ProductCard, type CardProduct } from "@/components/storefront/product-card";
+import { formatPrice } from "@/components/storefront/price";
 import { StoreHeader } from "@/components/storefront/store-header";
 import { socialHrefs } from "@/components/storefront/socials";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -63,6 +64,8 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
   }
   if (!data) notFound();
   const { store, sections, products } = data;
+  // "From $X" for tiered products; the owner-preview path doesn't compute it.
+  const fromPrices: Record<string, number> = "fromPrices" in data ? data.fromPrices : {};
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);
   // "Remove branding" is a Pro feature: Basic stores always show the footer credit.
   if ((await planTier(store)) === "basic") theme.showBranding = true;
@@ -78,6 +81,7 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
       priceCents: p.priceCents,
       currency: p.currency,
       buttonText: p.buttonText,
+      priceLabel: p.payWhatYouWant ? "Pay what you want" : fromPrices[p.id] != null ? `From ${formatPrice(fromPrices[p.id], p.currency)}` : null,
       cardStyle: p.cardStyle,
       thumbUrl: publicUrl(p.thumbnailKey),
       bannerUrl: publicUrl(p.bannerKey),

@@ -2,7 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entitlements, orders, paymentAccounts, productFiles, productLinks, products, stores } from "@/db/schema";
+import { entitlements, orders, paymentAccounts, productFiles, productLinks, products, productVariants, stores } from "@/db/schema";
 import { recordSale } from "@/lib/commerce";
 import { confirmBooking } from "@/lib/booking-confirm";
 import { env } from "@/lib/env";
@@ -111,8 +111,12 @@ export async function handleCheckoutPaid(session: Stripe.Checkout.Session, accou
     return { handled: true, action: "paid", orderId: order.id };
   }
 
-  // One entitlement per product on the order: the main product plus the order bump, if any.
-  const productIds = [order.productId, ...(order.bumpProductId && order.bumpProductId !== order.productId ? [order.bumpProductId] : [])];
+  // One entitlement per product on the order: the main product plus every accepted bump (the list, or the legacy single).
+  const bumpIds = order.bumps && order.bumps.length > 0 ? order.bumps.map((b) => b.productId) : order.bumpProductId ? [order.bumpProductId] : [];
+  const productIds = [order.productId, ...[...new Set(bumpIds)].filter((id) => id !== order.productId)];
+  // Pricing tier: the files this purchase unlocks (snapshotted on the entitlement so later tier edits can't widen access).
+  const variant = order.variantId ? await db.query.productVariants.findFirst({ where: eq(productVariants.id, order.variantId) }) : null;
+  const tierFileIds = variant && variant.fileIds.length > 0 ? variant.fileIds : null;
   const existing = await db.select().from(entitlements).where(eq(entitlements.orderId, order.id));
   const tokens = new Map<string, string>();
   for (const productId of productIds) {
@@ -120,7 +124,7 @@ export async function handleCheckoutPaid(session: Stripe.Checkout.Session, accou
     if (!ent) {
       [ent] = await db
         .insert(entitlements)
-        .values({ id: newId("ent"), orderId: order.id, productId, buyerEmail: order.buyerEmail, token: newToken() })
+        .values({ id: newId("ent"), orderId: order.id, productId, buyerEmail: order.buyerEmail, token: newToken(), allowedFileIds: productId === order.productId ? tierFileIds : null })
         .returning();
     } else if (ent.revoked) {
       // Re-paid after a refund (rare); make sure the buyer can download again.
@@ -145,10 +149,12 @@ export async function handleCheckoutPaid(session: Stripe.Checkout.Session, accou
       const p = rows.find((r) => r.id === productId);
       const token = tokens.get(productId);
       if (!p || !token) continue;
-      const [files, links] = await Promise.all([
+      const [allFiles, links] = await Promise.all([
         db.select().from(productFiles).where(eq(productFiles.productId, p.id)).orderBy(asc(productFiles.position)),
         db.select().from(productLinks).where(eq(productLinks.productId, p.id)).orderBy(asc(productLinks.position)),
       ]);
+      // A pricing tier may unlock only some of the main product's files.
+      const files = p.id === order.productId && tierFileIds ? allFiles.filter((f) => tierFileIds.includes(f.id)) : allFiles;
       items.push({ product: p, files, links, token });
     }
     // Same template as the free flow. Never throws, so a mail hiccup can't trigger Stripe retries.

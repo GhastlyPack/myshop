@@ -15,7 +15,6 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/format";
 
-const NO_BUMP = "__none__";
 /** Stripe's minimum charge; mirrors MIN_CHARGE_CENTS in src/lib/commerce.ts (server-only). */
 const MIN_CHARGE_CENTS = 50;
 
@@ -44,15 +43,26 @@ export function CheckoutTab({
   bumpCandidates,
   discountCodes,
   tier,
-}: TabProps & { productId: string; currency: string; quantitySold: number; bumpCandidates: BumpCandidate[]; discountCodes: DiscountCodeRow[]; tier: "basic" | "pro" }) {
+  files = [],
+}: TabProps & {
+  productId: string;
+  currency: string;
+  quantitySold: number;
+  bumpCandidates: BumpCandidate[];
+  discountCodes: DiscountCodeRow[];
+  tier: "basic" | "pro";
+  /** The product's uploaded files, for choosing what each pricing tier unlocks. */
+  files?: { id: string; filename: string }[];
+}) {
   const isPro = tier === "pro";
   const fields = form.fields;
   const limited = form.quantityLimit != null;
   const remaining = form.quantityLimit != null ? Math.max(0, form.quantityLimit - quantitySold) : null;
   const canBump = form.priceCents >= MIN_CHARGE_CENTS;
-  const bump = bumpCandidates.find((b) => b.id === form.bumpProductId) ?? null;
-  const bumpPrice = bump ? bumpPriceCents(bump.priceCents, form.bumpDiscountPercent) : 0;
-  const bumpPlaceholder = bump ? `Add ${bump.title} for ${formatPrice(bumpPrice, currency)}` : "Add {title} for {price}";
+  // The list is the model; a product that only ever set the legacy single bump is shown as a one-item list.
+  const bumpsList = form.bumps && form.bumps.length > 0 ? form.bumps : form.bumpProductId ? [{ productId: form.bumpProductId, headline: form.bumpHeadline ?? "", discountPercent: form.bumpDiscountPercent ?? 0 }] : [];
+  const variantsList = form.variants ?? [];
+  const setBumps = (bumps: typeof bumpsList) => update({ bumps, bumpProductId: bumps[0]?.productId ?? null, bumpHeadline: bumps[0]?.headline ?? "", bumpDiscountPercent: bumps[0]?.discountPercent ?? 0 });
   function setField(i: number, patch: Partial<CustomField>) {
     update({ fields: fields.map((f, idx) => (idx === i ? { ...f, ...patch } : f)) });
   }
@@ -173,62 +183,179 @@ export function CheckoutTab({
       {isPro ? (
       <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
         <div>
-          <h2 className="text-sm font-semibold">Order bump</h2>
-          <p className="text-xs text-muted-foreground">Offer one more paid product as a one-tap add-on right above the pay button.</p>
+          <h2 className="text-sm font-semibold">Order bumps</h2>
+          <p className="text-xs text-muted-foreground">Offer up to 5 more paid products as one-tap add-ons above the pay button. Buyers can add any of them.</p>
         </div>
+        <FieldError>{errors.bumpProductId ?? errors.bumps}</FieldError>
         {!canBump ? (
           <FieldHint>Order bumps need a price of at least {formatPrice(MIN_CHARGE_CENTS, currency)} on this product, so cards can be charged for the combined total.</FieldHint>
         ) : bumpCandidates.length === 0 ? (
           <FieldHint>Publish another paid download in your store to offer it here.</FieldHint>
         ) : (
-          <>
-            <Field label="Product" error={errors.bumpProductId}>
-              <Select
-                value={form.bumpProductId ?? NO_BUMP}
-                onValueChange={(v) => update({ bumpProductId: v === NO_BUMP ? null : v, ...(v === NO_BUMP ? { bumpHeadline: "", bumpDiscountPercent: 0 } : {}) })}
+          <div className="space-y-3">
+            {bumpsList.map((b, i) => {
+              const cand = bumpCandidates.find((c) => c.id === b.productId) ?? null;
+              const paid = cand ? bumpPriceCents(cand.priceCents, b.discountPercent ?? 0) : 0;
+              const setB = (patch: Partial<typeof b>) => setBumps(bumpsList.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              return (
+                <div key={`${b.productId}-${i}`} className="space-y-3 rounded-lg border p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Field label={`Bump ${i + 1}`}>
+                        <Select value={b.productId} onValueChange={(v) => setB({ productId: v })}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bumpCandidates.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.title} · {formatPrice(c.priceCents, currency)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" aria-label="Remove bump" className="mt-6" onClick={() => setBumps(bumpsList.filter((_, j) => j !== i))}>
+                      <Trash2 />
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
+                    <Field label="Headline" htmlFor={`bumpHeadline-${i}`}>
+                      <Input
+                        id={`bumpHeadline-${i}`}
+                        value={b.headline ?? ""}
+                        onChange={(e) => setB({ headline: e.target.value })}
+                        maxLength={120}
+                        placeholder={cand ? `Add ${cand.title} for ${formatPrice(paid, currency)}` : "Add {title} for {price}"}
+                      />
+                      <FieldHint>Leave blank to use the default.</FieldHint>
+                    </Field>
+                    <Field label="Percent off" htmlFor={`bumpPct-${i}`}>
+                      <Input
+                        id={`bumpPct-${i}`}
+                        inputMode="numeric"
+                        value={b.discountPercent || ""}
+                        onChange={(e) => {
+                          const n = parseInt(e.target.value.replace(/\D/g, ""), 10);
+                          setB({ discountPercent: Number.isFinite(n) ? Math.min(100, n) : 0 });
+                        }}
+                        placeholder="0"
+                      />
+                      {cand && (
+                        <FieldHint>
+                          Buyers pay {formatPrice(paid, currency)}
+                          {(b.discountPercent ?? 0) > 0 ? ` instead of ${formatPrice(cand.priceCents, currency)}` : ""}.
+                        </FieldHint>
+                      )}
+                    </Field>
+                  </div>
+                </div>
+              );
+            })}
+            {bumpsList.length < 5 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={bumpCandidates.every((c) => bumpsList.some((b) => b.productId === c.id))}
+                onClick={() => {
+                  const used = new Set(bumpsList.map((b) => b.productId));
+                  const next = bumpCandidates.find((c) => !used.has(c.id));
+                  if (next) setBumps([...bumpsList, { productId: next.id, headline: "", discountPercent: 0 }]);
+                }}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_BUMP}>No order bump</SelectItem>
-                  {bumpCandidates.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.title} · {formatPrice(b.priceCents, currency)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            {bump && (
-              <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
-                <Field label="Headline" htmlFor="bumpHeadline" error={errors.bumpHeadline}>
-                  <Input id="bumpHeadline" value={form.bumpHeadline} onChange={(e) => update({ bumpHeadline: e.target.value })} maxLength={120} placeholder={bumpPlaceholder} />
-                  <FieldHint>Leave blank to use the default.</FieldHint>
-                </Field>
-                <Field label="Percent off" htmlFor="bumpDiscountPercent" error={errors.bumpDiscountPercent}>
-                  <Input
-                    id="bumpDiscountPercent"
-                    inputMode="numeric"
-                    value={form.bumpDiscountPercent || ""}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value.replace(/\D/g, ""), 10);
-                      update({ bumpDiscountPercent: Number.isFinite(n) ? Math.min(100, n) : 0 });
-                    }}
-                    placeholder="0"
-                  />
-                  <FieldHint>
-                    Buyers pay {formatPrice(bumpPrice, currency)}
-                    {form.bumpDiscountPercent > 0 ? ` instead of ${formatPrice(bump.priceCents, currency)}` : ""}.
-                  </FieldHint>
-                </Field>
-              </div>
+                <Plus data-icon="inline-start" /> Add a bump
+              </Button>
             )}
-          </>
+          </div>
         )}
       </section>
       ) : (
-        <ProLock feature="order-bump" title="Order bump" description="Offer a one-tap add-on above the pay button to lift order value. Available on Pro." />
+        <ProLock feature="order-bump" title="Order bumps" description="Offer one-tap add-ons above the pay button to lift order value. Available on Pro." />
+      )}
+
+      {isPro ? (
+      <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
+        <div>
+          <h2 className="text-sm font-semibold">Pricing tiers</h2>
+          <p className="text-xs text-muted-foreground">Sell this product at more than one price — Basic / Plus / Pro — each unlocking the files you pick. Leave empty for a single price.</p>
+        </div>
+        <FieldError>{errors.variants}</FieldError>
+        {form.type !== "download" ? (
+          <FieldHint>Tiers are for digital downloads.</FieldHint>
+        ) : (
+          <div className="space-y-3">
+            {variantsList.map((v, i) => {
+              const setV = (patch: Partial<typeof v>) => update({ variants: variantsList.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+              const allIds = files.map((f) => f.id);
+              // Empty (or unset) means every file, including ones uploaded later.
+              const fileIds = v.fileIds ?? [];
+              const included = fileIds.length === 0 ? allIds : fileIds;
+              return (
+                <div key={v.id ?? `new-${i}`} className="space-y-3 rounded-lg border p-3">
+                  <div className="grid gap-3 sm:grid-cols-[1fr_8rem_auto]">
+                    <Field label="Tier name" htmlFor={`tier-name-${i}`}>
+                      <Input id={`tier-name-${i}`} value={v.name} onChange={(e) => setV({ name: e.target.value })} maxLength={60} placeholder={["Basic", "Plus", "Pro"][i] ?? "Tier"} />
+                    </Field>
+                    <Field label="Price" htmlFor={`tier-price-${i}`}>
+                      <Input
+                        id={`tier-price-${i}`}
+                        inputMode="decimal"
+                        defaultValue={(v.priceCents / 100).toFixed(2)}
+                        onBlur={(e) => setV({ priceCents: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)) })}
+                      />
+                    </Field>
+                    <div className="flex items-end">
+                      <Button type="button" variant="ghost" size="icon" aria-label="Remove tier" onClick={() => update({ variants: variantsList.filter((_, j) => j !== i) })}>
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  </div>
+                  <Field label="What's included" htmlFor={`tier-desc-${i}`}>
+                    <Input id={`tier-desc-${i}`} value={v.description ?? ""} onChange={(e) => setV({ description: e.target.value })} maxLength={200} placeholder="One line buyers see under the tier name." />
+                  </Field>
+                  {files.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-sm font-medium">Files in this tier</span>
+                      <p className="text-xs text-muted-foreground">Untick a file to leave it out of this tier.</p>
+                      <div className="flex flex-wrap gap-2">
+                        {files.map((f) => (
+                          <label key={f.id} className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={included.includes(f.id)}
+                              onChange={(e) => {
+                                const next = e.target.checked ? [...new Set([...included, f.id])] : included.filter((id) => id !== f.id);
+                                // Everything ticked is stored as "all" so newly uploaded files join automatically.
+                                setV({ fileIds: next.length === allIds.length ? [] : next });
+                              }}
+                            />
+                            <span className="max-w-[14rem] truncate">{f.filename}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {variantsList.length < 6 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => update({ variants: [...variantsList, { name: "", description: "", priceCents: form.priceCents, fileIds: [] }] })}
+              >
+                <Plus data-icon="inline-start" /> Add a tier
+              </Button>
+            )}
+            {variantsList.length > 0 && <FieldHint>With tiers, the product&apos;s own price shows as the &quot;from&quot; price on your store.</FieldHint>}
+          </div>
+        )}
+      </section>
+      ) : (
+        <ProLock feature="pricing-tiers" title="Pricing tiers" description="Sell one product at several prices, each unlocking different files. Available on Pro." />
       )}
 
       {isPro ? (

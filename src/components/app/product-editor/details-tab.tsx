@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { EditorSection, TabProps } from "@/components/app/product-editor/editor";
 import { Field, FieldHint } from "@/components/app/product-editor/field";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,6 +110,30 @@ export function DetailsTab({ form, update, errors, sections, currency, canBook }
             <FieldHint>{form.priceCents > 0 ? "Connect Stripe in Settings to accept payments." : "Leave empty for a free product (collects name + email)."}</FieldHint>
           </Field>
         </div>
+
+        {form.type !== "booking" && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+            <div>
+              <div className="text-sm font-medium">Pay what you want</div>
+              <p className="text-xs text-muted-foreground">Buyers name their price; the price above is the suggestion. Discount codes don&apos;t apply.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {form.payWhatYouWant && (
+                <label className="flex items-center gap-1.5 text-sm">
+                  <span className="text-muted-foreground">Min</span>
+                  <Input
+                    inputMode="decimal"
+                    defaultValue={((form.minPriceCents ?? 0) / 100).toFixed(2)}
+                    onBlur={(e) => update({ minPriceCents: Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100)) })}
+                    className="w-24"
+                    aria-label="Minimum price"
+                  />
+                </label>
+              )}
+              <Switch checked={Boolean(form.payWhatYouWant)} onCheckedChange={(v) => update({ payWhatYouWant: v })} aria-label="Pay what you want" />
+            </div>
+          </div>
+        )}
 
         {form.type === "booking" && (
           <div className="grid gap-5 sm:grid-cols-2">

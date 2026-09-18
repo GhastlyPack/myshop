@@ -99,9 +99,14 @@ export function platformFeeCents(amountCents: number, platformFeeBps: number) {
   return Math.round((amountCents * platformFeeBps) / 10000);
 }
 
-/** What the buyer is charged: discounted main price + bump. */
-export function checkoutTotalCents(input: Pick<CheckoutInput, "amountCents" | "bump">) {
-  return input.amountCents + (input.bump?.amountCents ?? 0);
+/** Every bump on the checkout: the list, or the legacy single one. */
+export function checkoutBumps(input: Pick<CheckoutInput, "bump" | "bumps">) {
+  return input.bumps && input.bumps.length > 0 ? input.bumps : input.bump ? [input.bump] : [];
+}
+
+/** What the buyer is charged: discounted main price + every bump. */
+export function checkoutTotalCents(input: Pick<CheckoutInput, "amountCents" | "bump" | "bumps">) {
+  return input.amountCents + checkoutBumps(input).reduce((s, b) => s + b.amountCents, 0);
 }
 
 /**
@@ -116,8 +121,8 @@ export async function createCheckoutSession(input: CheckoutInput, accountId: str
   const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     { price_data: { currency, unit_amount: input.amountCents, product_data: { name: input.title } }, quantity: 1 },
   ];
-  // Order bump rides along as its own line so the receipt itemises it.
-  if (input.bump) line_items.push({ price_data: { currency, unit_amount: input.bump.amountCents, product_data: { name: input.bump.title } }, quantity: 1 });
+  // Each order bump rides along as its own line so the receipt itemises it.
+  for (const b of checkoutBumps(input)) line_items.push({ price_data: { currency, unit_amount: b.amountCents, product_data: { name: b.title } }, quantity: 1 });
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
     line_items,

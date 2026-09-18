@@ -22,7 +22,7 @@ import { TrackView } from "@/components/storefront/track-view";
 import { StorePixelEvent } from "@/components/storefront/store-pixels";
 import { resolveStorePixels } from "@/lib/pixels";
 import { env } from "@/lib/env";
-import { bumpPrice, defaultBumpHeadline, isSoldOut, LOW_STOCK_AT, remainingUnits } from "@/lib/commerce";
+import { defaultBumpHeadline, isSoldOut, LOW_STOCK_AT, remainingUnits, resolveBumps } from "@/lib/commerce";
 import { findProductByPreviousSlug, getPublicProduct, getPublicStoreTagged } from "@/lib/queries";
 import { planTier } from "@/lib/billing";
 import { publicUrl } from "@/lib/storage";
@@ -54,7 +54,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
     if (moved) permanentRedirect(`/${username.toLowerCase()}/${moved.slug}`);
     notFound();
   }
-  const { store, product, files, links, reviews, bump } = data;
+  const { store, product, files, links, reviews, variants } = data;
   const siblings = (await getPublicStoreTagged(username))?.products.filter((p) => p.id !== product.id).slice(0, 4) ?? [];
   const { theme, isPreview } = await resolveStoreTheme(store, sp.previewTheme);
   // "Remove branding" is a Pro feature: Basic stores always show the footer credit.
@@ -62,17 +62,17 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const pixels = resolveStorePixels(store.pixels, env.META_PIXEL_ID);
   const remaining = remainingUnits(product);
   const soldOut = isSoldOut(product);
-  const bumpOffer: BumpOffer | null =
-    bump && product.priceCents > 0 && !isSoldOut(bump)
-      ? {
-          productId: bump.id,
-          title: bump.title,
-          headline: product.bumpHeadline?.trim() || defaultBumpHeadline(bump.title, formatPrice(bumpPrice(bump, product.bumpDiscountPercent), bump.currency)),
-          thumbUrl: publicUrl(bump.thumbnailKey),
-          priceCents: bump.priceCents,
-          bumpCents: bumpPrice(bump, product.bumpDiscountPercent),
-        }
-      : null;
+  // Every live order bump on this product (the list, or the legacy single one), priced after the creator's % off.
+  const bumpOffers: BumpOffer[] = (await resolveBumps(product)).map((b) => ({
+    productId: b.product.id,
+    title: b.product.title,
+    headline: b.config.headline?.trim() || defaultBumpHeadline(b.product.title, formatPrice(b.cents, b.product.currency)),
+    thumbUrl: publicUrl(b.product.thumbnailKey),
+    priceCents: b.product.priceCents,
+    bumpCents: b.cents,
+  }));
+  // Pricing tiers the buyer picks from; pay-what-you-want lets them name the price.
+  const tierOptions = variants.map((v) => ({ id: v.id, name: v.name, description: v.description, priceCents: v.priceCents }));
   const landing = sp.lp === "1";
   const banner = publicUrl(product.bannerKey);
   const thumb = publicUrl(product.thumbnailKey);
@@ -239,7 +239,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 fields={product.fields}
                 marketingOptIn={product.marketingOptIn}
                 pixels={pixels}
-                bump={bumpOffer}
+                bumps={bumpOffers}
+                variants={tierOptions}
+                payWhatYouWant={product.payWhatYouWant}
+                minPriceCents={product.minPriceCents}
               />
             </>
           )}

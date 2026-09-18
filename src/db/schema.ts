@@ -75,6 +75,11 @@ export type StorePixels = {
   tiktok?: { pixelId?: string };
 };
 
+/** One configured order bump on a product: another paid product from the same store, optionally discounted. */
+export type BumpConfig = { productId: string; headline?: string; discountPercent?: number };
+/** A bump the buyer accepted on an order, with what they paid for it snapshotted. */
+export type OrderBump = { productId: string; title: string; cents: number };
+
 /** One open window on a weekday, in the store's timezone. "HH:MM" 24-hour. */
 export type AvailabilityWindow = { start: string; end: string };
 /** Recurring weekly open hours, keyed by weekday 0=Sunday … 6=Saturday. */
@@ -186,6 +191,11 @@ export const products = pgTable(
     bumpProductId: text("bump_product_id").references((): AnyPgColumn => products.id, { onDelete: "set null" }),
     bumpHeadline: text("bump_headline"),
     bumpDiscountPercent: integer("bump_discount_percent").notNull().default(0),
+    /** Multiple order bumps. When non-empty this wins over the legacy single-bump columns above (kept in sync with bumps[0]). */
+    bumps: jsonb("bumps").$type<BumpConfig[]>().notNull().default([]),
+    /** Pay what you want: `priceCents` becomes the suggested amount, `minPriceCents` the floor (0 = can be free). */
+    payWhatYouWant: boolean("pay_what_you_want").notNull().default(false),
+    minPriceCents: integer("min_price_cents").notNull().default(0),
     /** Archived (soft-deleted). Hidden everywhere, but orders, entitlements and files stay so buyers keep access. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -286,6 +296,11 @@ export const orders = pgTable(
     discountCents: integer("discount_cents").notNull().default(0),
     bumpProductId: text("bump_product_id").references(() => products.id, { onDelete: "set null" }),
     bumpCents: integer("bump_cents").notNull().default(0),
+    /** All bumps on the order (title + cents snapshot). Legacy bumpProductId/bumpCents mirror bumps[0]. */
+    bumps: jsonb("bumps").$type<OrderBump[]>().notNull().default([]),
+    /** Pricing tier chosen, if the product has variants. Name is snapshotted for receipts. */
+    variantId: text("variant_id"),
+    variantName: text("variant_name"),
     provider: orderProvider("provider").notNull().default("free"),
     providerRef: text("provider_ref"), // checkout session / payment intent / paypal order id
     status: orderStatus("status").notNull().default("pending"),
@@ -314,9 +329,34 @@ export const entitlements = pgTable(
     buyerEmail: text("buyer_email").notNull(),
     token: text("token").notNull(), // used in /d/[token]
     revoked: boolean("revoked").notNull().default(false),
+    /** Pricing tiers: the file ids this purchase unlocks, snapshotted at sale time. Null = every file on the product. */
+    allowedFileIds: text("allowed_file_ids").array(),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("entitlements_token_idx").on(t.token), index("entitlements_email_idx").on(t.buyerEmail)],
+);
+
+/**
+ * Pricing tiers under one product ("Basic / Plus / Pro" of the same download). Each tier has
+ * its own price and the subset of the product's files it unlocks (empty = every file). The
+ * product's own priceCents is the "from" price when tiers exist.
+ */
+export const productVariants = pgTable(
+  "product_variants",
+  {
+    id: id(),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    priceCents: integer("price_cents").notNull().default(0),
+    /** Product file ids included in this tier. Empty = all files. */
+    fileIds: text("file_ids").array().notNull().default(sql`'{}'::text[]`),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("product_variants_product_idx").on(t.productId, t.position)],
 );
 
 export const downloads = pgTable(
@@ -593,3 +633,4 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type InstagramBetaRequest = typeof instagramBetaRequests.$inferSelect;
 export type CalendarConnection = typeof calendarConnections.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
+export type ProductVariant = typeof productVariants.$inferSelect;

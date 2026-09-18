@@ -1,11 +1,11 @@
 "use server";
 
-import { and, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, inArray, eq, isNull, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { discountCodes, productFiles, productLinks, products, sections, type CustomField, type DiscountCode } from "@/db/schema";
+import { discountCodes, productFiles, productLinks, products, productVariants, sections, type CustomField, type DiscountCode, type BumpConfig } from "@/db/schema";
 import { requireStore } from "@/lib/auth";
 import { canOfferBump } from "@/lib/commerce";
 import { planTier, storeHasBilling } from "@/lib/billing";
@@ -63,20 +63,38 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
     else sectionId = sec.id;
   }
 
-  // Order bump: another paid, published, live product from this store; only on a card-payable product.
-  let bumpProductId: string | null = null;
-  if (d.bumpProductId) {
+  // Order bumps: paid, published, live products from this store; only on a card-payable product.
+  // The `bumps` list is the model; the legacy single columns mirror its first entry.
+  const requestedBumps: BumpConfig[] = (
+    d.bumps && d.bumps.length > 0 ? d.bumps : d.bumpProductId ? [{ productId: d.bumpProductId, headline: d.bumpHeadline, discountPercent: d.bumpDiscountPercent }] : []
+  ).filter((b) => b.productId);
+  const validBumps: BumpConfig[] = [];
+  if (requestedBumps.length > 0) {
     if (!canOfferBump(d)) errors.bumpProductId = "Order bumps need a price of at least $0.50 on this product.";
-    else if (d.bumpProductId === product.id) errors.bumpProductId = "A product can't bump itself.";
     else {
-      const bump = await db.query.products.findFirst({
-        where: and(eq(products.id, d.bumpProductId), eq(products.storeId, store.id), eq(products.status, "published"), isNull(products.deletedAt)),
-        columns: { id: true, priceCents: true, type: true },
-      });
-      if (!bump || bump.priceCents <= 0 || bump.type === "link") errors.bumpProductId = "Pick a paid, published download from your store.";
-      else bumpProductId = bump.id;
+      const ids = [...new Set(requestedBumps.map((b) => b.productId))].filter((pid) => pid !== product.id);
+      const rows = ids.length
+        ? await db.query.products.findMany({
+            where: and(inArray(products.id, ids), eq(products.storeId, store.id), eq(products.status, "published"), isNull(products.deletedAt)),
+            columns: { id: true, priceCents: true, type: true },
+          })
+        : [];
+      for (const b of requestedBumps) {
+        if (b.productId === product.id) {
+          errors.bumpProductId = "A product can't bump itself.";
+          continue;
+        }
+        const row = rows.find((r) => r.id === b.productId);
+        if (!row || row.priceCents <= 0 || row.type === "link") {
+          errors.bumpProductId = "Pick paid, published downloads from your store.";
+          continue;
+        }
+        if (validBumps.some((v) => v.productId === b.productId)) continue;
+        validBumps.push({ productId: b.productId, headline: (b.headline ?? "").trim(), discountPercent: Math.min(100, Math.max(0, Math.round(b.discountPercent ?? 0))) });
+      }
     }
   }
+  const bumpProductId: string | null = validBumps[0]?.productId ?? null;
 
   // Select-type fields need options.
   for (const f of d.fields) {
@@ -112,6 +130,12 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
   const effBumpDiscountPercent = proOnly ? d.bumpDiscountPercent : product.bumpDiscountPercent;
   const effQuantityLimit = proOnly ? d.quantityLimit : product.quantityLimit;
   const effFields = proOnly ? d.fields : (product.fields as typeof d.fields);
+  // Multiple bumps, pay-what-you-want and pricing tiers are Pro too.
+  const effBumps: BumpConfig[] = proOnly ? validBumps : (product.bumps ?? []);
+  const effPwyw = proOnly ? Boolean(d.payWhatYouWant) : product.payWhatYouWant;
+  const effMinPrice = proOnly ? Math.max(0, d.minPriceCents ?? 0) : product.minPriceCents;
+  // null = leave the saved tiers untouched (Basic, or a non-download where tiers don't apply).
+  const effVariants = proOnly && d.type === "download" ? (d.variants ?? []) : null;
 
   const title = d.title || "Untitled product";
   const fields: CustomField[] = effFields.map((f) => ({
@@ -152,9 +176,37 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
         bumpProductId: effBumpProductId,
         bumpHeadline: effBumpProductId ? effBumpHeadline : null,
         bumpDiscountPercent: effBumpProductId ? effBumpDiscountPercent : 0,
+        bumps: effBumps,
+        payWhatYouWant: effPwyw,
+        minPriceCents: effPwyw ? effMinPrice : 0,
         status,
       })
       .where(eq(products.id, product.id));
+    // Pricing tiers: update by id so past orders keep their tier name, insert new ones, drop removed ones.
+    // Entitlements snapshot their file ids at sale time, so removing a tier never widens a past buyer's access.
+    if (effVariants) {
+      const keep = new Set<string>();
+      for (let i = 0; i < effVariants.length; i++) {
+        const v = effVariants[i];
+        const vals = { productId: product.id, name: v.name, description: v.description || null, priceCents: v.priceCents, fileIds: v.fileIds ?? [], position: i };
+        if (v.id) {
+          const [row] = await tx
+            .update(productVariants)
+            .set(vals)
+            .where(and(eq(productVariants.id, v.id), eq(productVariants.productId, product.id)))
+            .returning({ id: productVariants.id });
+          if (row) {
+            keep.add(row.id);
+            continue;
+          }
+        }
+        const [ins] = await tx.insert(productVariants).values({ id: newId("var"), ...vals }).returning({ id: productVariants.id });
+        keep.add(ins.id);
+      }
+      const existingRows = await tx.select({ id: productVariants.id }).from(productVariants).where(eq(productVariants.productId, product.id));
+      const drop = existingRows.map((r) => r.id).filter((vid) => !keep.has(vid));
+      if (drop.length) await tx.delete(productVariants).where(inArray(productVariants.id, drop));
+    }
     await tx.delete(productLinks).where(eq(productLinks.productId, product.id));
     if (d.links.length) {
       await tx.insert(productLinks).values(d.links.map((l, i) => ({ id: newId("lnk"), productId: product.id, url: l.url, label: l.label, position: i })));

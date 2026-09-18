@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { orders, type CustomField, type TrafficSource } from "@/db/schema";
 import { resolvePlan } from "@/lib/billing";
-import { bumpPrice, computeTotals, findDiscount, liveAvailability, normalizeCode, resolveBump } from "@/lib/commerce";
+import { checkPwywAmount, computeTotals, findDiscount, liveAvailability, normalizeCode, resolveBumps } from "@/lib/commerce";
 import { env } from "@/lib/env";
 import { claimFreeProduct } from "@/lib/free-checkout";
 import { newId } from "@/lib/ids";
@@ -39,6 +39,10 @@ const baseSchema = z.object({
   sessionId: z.string().max(64).optional(),
   pageUrl: z.string().max(2000).optional(),
   code: z.string().max(40).optional(),
+  /** Pricing tier chosen (when the product has tiers). */
+  variantId: z.string().max(64).optional(),
+  /** Pay-what-you-want amount in cents. */
+  amount: z.string().max(12).optional(),
 });
 
 function readFields(defs: CustomField[], fd: FormData): { values: Record<string, string | string[] | boolean>; error?: string } {
@@ -72,6 +76,8 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     sessionId: fd.get("sessionId") || undefined,
     pageUrl: fd.get("pageUrl") || undefined,
     code: fd.get("code") || undefined,
+    variantId: fd.get("variantId") || undefined,
+    amount: fd.get("amount") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the form" };
   const { username, slug, name, email, sessionId, pageUrl } = parsed.data;
@@ -84,17 +90,30 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
   const availability = await liveAvailability(product.id);
   if (availability.soldOut) return { error: "This product is sold out." };
 
-  // Pricing is recomputed here; the client's total is never trusted.
+  // Pricing is recomputed here; the client's numbers are never trusted.
+  // A pricing tier or a pay-what-you-want amount sets the effective price.
+  const variant = parsed.data.variantId ? (data.variants.find((v) => v.id === parsed.data.variantId) ?? null) : (data.variants[0] ?? null);
+  if (data.variants.length > 0 && !variant) return { error: "Pick a pricing tier." };
+  let effectivePrice = variant ? variant.priceCents : product.priceCents;
+  if (product.payWhatYouWant && !variant) {
+    const amt = Number.parseInt(parsed.data.amount ?? "", 10);
+    const chk = checkPwywAmount(product, Number.isFinite(amt) ? amt : -1);
+    if (!chk.ok) return { error: chk.error };
+    effectivePrice = chk.cents;
+  }
+  // A tier may unlock only some files.
+  const tierFiles = variant && variant.fileIds.length > 0 ? files.filter((f) => variant.fileIds.includes(f.id)) : files;
+
   let discount: { code: string; cents: number } | null = null;
-  if (product.priceCents > 0 && parsed.data.code && normalizeCode(parsed.data.code)) {
-    const res = await findDiscount(product, parsed.data.code);
+  if (!product.payWhatYouWant && effectivePrice > 0 && parsed.data.code && normalizeCode(parsed.data.code)) {
+    const res = await findDiscount({ id: product.id, priceCents: effectivePrice }, parsed.data.code);
     if (!res.ok) return { error: res.error };
     discount = { code: res.code.code, cents: res.discountCents };
   }
-  const bumpWanted = fd.get("bump") === "on";
-  const bump = bumpWanted && product.priceCents > 0 ? await resolveBump(product) : null;
-  const bumpCents = bump ? bumpPrice(bump, product.bumpDiscountPercent) : 0;
-  const totals = computeTotals(product.priceCents, discount?.cents ?? 0, bumpCents);
+  // Every bump has its own checkbox; the legacy single `bump` field maps to the first offer.
+  const offered = effectivePrice > 0 ? await resolveBumps(product) : [];
+  const chosen = offered.filter((b, i) => fd.get(`bump_${b.product.id}`) === "on" || (i === 0 && fd.get("bump") === "on"));
+  const totals = computeTotals(effectivePrice, discount?.cents ?? 0, chosen.map((b) => b.cents));
 
   const fields = readFields(product.fields, fd);
   if (fields.error) return { error: fields.error };
@@ -114,7 +133,7 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     const res = await claimFreeProduct({
       store,
       product,
-      files,
+      files: tierFiles,
       links,
       buyerName: name,
       buyerEmail: email,
@@ -126,6 +145,7 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
       userAgent: h.get("user-agent"),
       pageUrl: pageUrl ?? null,
       discount,
+      variant: variant ? { id: variant.id, name: variant.name, fileIds: variant.fileIds } : null,
     });
     if (!res.ok) return { error: res.error };
     redirect(`/${store.username}/${product.slug}/thanks?e=${res.token}`);
@@ -148,8 +168,12 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     currency: product.currency,
     discountCode: discount?.code ?? null,
     discountCents: totals.discountCents,
-    bumpProductId: bump?.id ?? null,
+    // Legacy single-bump columns mirror the first bump; the list is the record.
+    bumpProductId: chosen[0]?.product.id ?? null,
     bumpCents: totals.bumpCents,
+    bumps: chosen.map((b) => ({ productId: b.product.id, title: b.product.title, cents: b.cents })),
+    variantId: variant?.id ?? null,
+    variantName: variant?.name ?? null,
     provider: "stripe",
     status: "pending",
     source,
@@ -158,8 +182,9 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     orderId,
     storeId: store.id,
     productId: product.id,
-    amountCents: product.priceCents - totals.discountCents,
-    bump: bump ? { productId: bump.id, title: bump.title, amountCents: totals.bumpCents } : null,
+    amountCents: effectivePrice - totals.discountCents,
+    bump: null,
+    bumps: chosen.map((b) => ({ productId: b.product.id, title: b.product.title, amountCents: b.cents })),
     currency: product.currency,
     buyerEmail: email,
     buyerName: name,

@@ -203,6 +203,7 @@ export function ProductEditor({
             bumpCandidates={bumpCandidates}
             discountCodes={discountCodes}
             tier={tier}
+            files={files.map((f) => ({ id: f.id, filename: f.filename }))}
           />
         </TabsContent>
         <TabsContent value="options" className="pt-4">

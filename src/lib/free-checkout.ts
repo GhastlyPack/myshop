@@ -48,6 +48,8 @@ export type ClaimInput = {
   pageUrl?: string | null;
   /** A validated discount code that brings a paid product to $0 (then it's claimed like a free one). */
   discount?: { code: string; cents: number } | null;
+  /** Pricing tier chosen (a $0 tier claims like a free product); its file ids are snapshotted on the entitlement. */
+  variant?: { id: string; name: string; fileIds: string[] } | null;
 };
 
 export type ClaimResult = { ok: true; token: string } | { ok: false; error: string };
@@ -75,11 +77,21 @@ export async function claimFreeProduct(input: ClaimInput): Promise<ClaimResult> 
       currency: product.currency,
       discountCode: input.discount?.code ?? null,
       discountCents,
+      variantId: input.variant?.id ?? null,
+      variantName: input.variant?.name ?? null,
       provider: "free",
       status: "paid",
       source: input.source,
     });
-    await tx.insert(entitlements).values({ id: newId("ent"), orderId, productId: product.id, buyerEmail: email, token });
+    await tx.insert(entitlements).values({
+      id: newId("ent"),
+      orderId,
+      productId: product.id,
+      buyerEmail: email,
+      token,
+      // A tier that includes only some files is snapshotted so later tier edits can't widen access.
+      allowedFileIds: input.variant && input.variant.fileIds.length > 0 ? input.variant.fileIds : null,
+    });
   });
   await recordSale({ id: orderId, productId: product.id, bumpProductId: null, discountCode: input.discount?.code ?? null }, store.username);
 

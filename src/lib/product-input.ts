@@ -41,10 +41,38 @@ export const productInputSchema = z.object({
   dmReplyText: z.string().trim().max(600, "Keep the reply under 600 characters."),
   /** Limited quantity; null = unlimited. */
   quantityLimit: z.number().int().min(1, "Limit must be at least 1.").max(1_000_000).nullable(),
-  /** Order bump: another paid product from the same store. */
+  /** Order bump: another paid product from the same store. (Legacy single-bump fields; `bumps` is the list.) */
   bumpProductId: z.string().max(64).nullable(),
   bumpHeadline: z.string().trim().max(120, "Keep the headline under 120 characters."),
   bumpDiscountPercent: z.number().int().min(0).max(100, "Enter 0 to 100."),
+  /** Multiple order bumps, in the order they're shown at checkout. */
+  bumps: z
+    .array(
+      z.object({
+        productId: z.string().min(1).max(64),
+        headline: z.string().trim().max(120, "Keep the headline under 120 characters.").default(""),
+        discountPercent: z.number().int().min(0).max(100, "Enter 0 to 100.").default(0),
+      }),
+    )
+    .max(5, "Up to 5 order bumps.")
+    .default([]),
+  /** Pay what you want: priceCents is the suggested amount; minPriceCents the floor. */
+  payWhatYouWant: z.boolean().default(false),
+  minPriceCents: z.number().int().min(0).max(100_000_000).default(0),
+  /** Pricing tiers under this product. Empty = single price. */
+  variants: z
+    .array(
+      z.object({
+        id: z.string().max(64).optional(),
+        name: z.string().trim().min(1, "Give the tier a name.").max(60, "Keep tier names under 60 characters."),
+        description: z.string().trim().max(200, "Keep the tier blurb under 200 characters.").default(""),
+        priceCents: z.number().int().min(0).max(100_000_000, "That price is too high."),
+        /** Product file ids included; empty = all files. */
+        fileIds: z.array(z.string().max(64)).max(200).default([]),
+      }),
+    )
+    .max(6, "Up to 6 pricing tiers.")
+    .default([]),
 });
 
 /** Discount code form, shared by the editor and its server actions. */

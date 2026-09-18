@@ -1,7 +1,7 @@
 import "server-only";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { discountCodes, orders, products, type DiscountCode, type Product } from "@/db/schema";
+import { discountCodes, orders, products, type BumpConfig, type DiscountCode, type Product } from "@/db/schema";
 import { revalidateStore } from "@/lib/queries";
 
 /**
@@ -105,14 +105,62 @@ export async function resolveBump(p: Pick<Product, "id" | "storeId" | "priceCent
   return bump;
 }
 
+// ---------- multiple order bumps ----------
+
+/**
+ * The configured bumps on a product, newest model first: the `bumps` list wins; a product
+ * that only ever set the legacy single-bump columns is read as a one-item list.
+ */
+export function productBumpConfigs(p: Pick<Product, "bumps" | "bumpProductId" | "bumpHeadline" | "bumpDiscountPercent">): BumpConfig[] {
+  if (p.bumps && p.bumps.length > 0) return p.bumps;
+  if (p.bumpProductId) return [{ productId: p.bumpProductId, headline: p.bumpHeadline ?? "", discountPercent: p.bumpDiscountPercent }];
+  return [];
+}
+
+export type ResolvedBump = { config: BumpConfig; product: Product; cents: number };
+
+/** Live resolution of every bump on a product; ones that stopped being offerable are dropped. */
+export async function resolveBumps(p: Pick<Product, "id" | "storeId" | "priceCents" | "bumps" | "bumpProductId" | "bumpHeadline" | "bumpDiscountPercent">): Promise<ResolvedBump[]> {
+  if (!canOfferBump(p)) return [];
+  const configs = productBumpConfigs(p).filter((c) => c.productId && c.productId !== p.id);
+  if (configs.length === 0) return [];
+  const rows = await db.query.products.findMany({
+    where: and(inArray(products.id, configs.map((c) => c.productId)), eq(products.storeId, p.storeId), eq(products.status, "published"), isNull(products.deletedAt)),
+  });
+  const out: ResolvedBump[] = [];
+  const seen = new Set<string>();
+  for (const c of configs) {
+    if (seen.has(c.productId)) continue;
+    const bump = rows.find((r) => r.id === c.productId);
+    if (!bump || bump.priceCents <= 0 || bump.type === "link" || isSoldOut(bump)) continue;
+    seen.add(c.productId);
+    out.push({ config: c, product: bump, cents: bumpPrice(bump, c.discountPercent ?? 0) });
+  }
+  return out;
+}
+
+// ---------- pay what you want ----------
+
+/**
+ * Validates a buyer-entered amount for a pay-what-you-want product. Anything from the floor up;
+ * a non-zero amount must clear Stripe's minimum.
+ */
+export function checkPwywAmount(p: Pick<Product, "payWhatYouWant" | "minPriceCents">, amountCents: number): { ok: true; cents: number } | { ok: false; error: string } {
+  if (!p.payWhatYouWant) return { ok: false, error: "This product has a fixed price." };
+  if (!Number.isInteger(amountCents) || amountCents < 0) return { ok: false, error: "Enter an amount." };
+  if (amountCents < p.minPriceCents) return { ok: false, error: `The minimum is ${(p.minPriceCents / 100).toFixed(2)}.` };
+  if (amountCents > 0 && amountCents < MIN_CHARGE_CENTS) return { ok: false, error: `Amounts under ${(MIN_CHARGE_CENTS / 100).toFixed(2)} can't be charged. Enter 0 to get it free.` };
+  return { ok: true, cents: amountCents };
+}
+
 // ---------- totals ----------
 
 export type Totals = { priceCents: number; discountCents: number; bumpCents: number; totalCents: number };
 
-/** What the buyer pays: price − discount + bump. */
-export function computeTotals(priceCents: number, discountCents: number, bumpCents: number): Totals {
+/** What the buyer pays: price − discount + bumps (a single number or the sum of a list). */
+export function computeTotals(priceCents: number, discountCents: number, bumpCents: number | number[]): Totals {
   const d = Math.max(0, Math.min(priceCents, discountCents));
-  const b = Math.max(0, bumpCents);
+  const b = Math.max(0, Array.isArray(bumpCents) ? bumpCents.reduce((s, c) => s + Math.max(0, c), 0) : bumpCents);
   return { priceCents, discountCents: d, bumpCents: b, totalCents: Math.max(0, priceCents - d + b) };
 }
 
@@ -127,17 +175,22 @@ export function computeTotals(priceCents: number, discountCents: number, bumpCen
  * and the storefront shows sold out from then on. The discount counter, on the other hand,
  * never passes `max_uses`: the increment is guarded in SQL.
  */
-export async function recordSale(order: Pick<typeof orders.$inferSelect, "id" | "productId" | "bumpProductId" | "discountCode">, storeUsername?: string | null) {
+export async function recordSale(
+  order: Pick<typeof orders.$inferSelect, "id" | "productId" | "bumpProductId" | "discountCode"> & { bumps?: { productId: string }[] | null },
+  storeUsername?: string | null,
+) {
+  // Every bump on the order counts as a unit sold; fall back to the legacy single column.
+  const bumpIds = order.bumps && order.bumps.length > 0 ? [...new Set(order.bumps.map((b) => b.productId))] : order.bumpProductId ? [order.bumpProductId] : [];
   await db.transaction(async (tx) => {
     await tx
       .update(products)
       .set({ quantitySold: sql`${products.quantitySold} + 1` })
       .where(eq(products.id, order.productId));
-    if (order.bumpProductId) {
+    for (const bumpId of bumpIds) {
       await tx
         .update(products)
         .set({ quantitySold: sql`${products.quantitySold} + 1` })
-        .where(eq(products.id, order.bumpProductId));
+        .where(eq(products.id, bumpId));
     }
     if (order.discountCode) {
       await tx

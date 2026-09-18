@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, gt, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { discountCodes, productFiles, productLinks, products, sections } from "@/db/schema";
+import { discountCodes, productFiles, productLinks, products, productVariants, sections } from "@/db/schema";
 import { ProductEditor } from "@/components/app/product-editor/editor";
 import { requireStore } from "@/lib/auth";
 import { planTier } from "@/lib/billing";
@@ -20,11 +20,13 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
   const canBook = await canUseBookings(store);
   const product = await db.query.products.findFirst({ where: and(eq(products.id, id), eq(products.storeId, store.id), isNull(products.deletedAt)) });
   if (!product) notFound();
-  const [files, links, secs, codes, bumpCandidates] = await Promise.all([
+  const [files, links, secs, codes, variantRows, bumpCandidates] = await Promise.all([
     db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),
     db.select().from(productLinks).where(eq(productLinks.productId, product.id)).orderBy(asc(productLinks.position)),
     db.select({ id: sections.id, title: sections.title }).from(sections).where(eq(sections.storeId, store.id)).orderBy(asc(sections.position)),
     db.select().from(discountCodes).where(eq(discountCodes.productId, product.id)).orderBy(desc(discountCodes.createdAt)),
+    // Pricing tiers, in display order.
+    db.select().from(productVariants).where(eq(productVariants.productId, product.id)).orderBy(asc(productVariants.position)),
     // Paid, published, live downloads from this store can be offered as an order bump.
     db
       .select({ id: products.id, title: products.title, priceCents: products.priceCents })
@@ -63,6 +65,10 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
         bumpProductId: product.bumpProductId,
         bumpHeadline: product.bumpHeadline ?? "",
         bumpDiscountPercent: product.bumpDiscountPercent,
+        bumps: product.bumps ?? [],
+        payWhatYouWant: product.payWhatYouWant,
+        minPriceCents: product.minPriceCents,
+        variants: variantRows.map((v) => ({ id: v.id, name: v.name, description: v.description ?? "", priceCents: v.priceCents, fileIds: v.fileIds })),
         status: product.status,
       }}
       quantitySold={product.quantitySold}

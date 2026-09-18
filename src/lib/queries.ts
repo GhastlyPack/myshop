@@ -1,8 +1,8 @@
 import "server-only";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { db } from "@/db";
-import { productFiles, productLinks, products, reviews, sections, stores } from "@/db/schema";
+import { productFiles, productLinks, products, productVariants, reviews, sections, stores } from "@/db/schema";
 
 /**
  * Shared read queries. Public storefront reads are cached by username tag so a
@@ -32,7 +32,16 @@ export async function getPublicStore(usernameRaw: string) {
       .where(and(eq(products.storeId, store.id), eq(products.status, "published"), eq(products.listed, true), isNull(products.deletedAt)))
       .orderBy(asc(products.position)),
   ]);
-  return { store, sections: secs, products: prods };
+  // "From $X" for products with pricing tiers: the cheapest tier per product.
+  const fromPrices: Record<string, number> = {};
+  if (prods.length > 0) {
+    const tiers = await db
+      .select({ productId: productVariants.productId, priceCents: productVariants.priceCents })
+      .from(productVariants)
+      .where(inArray(productVariants.productId, prods.map((p) => p.id)));
+    for (const t of tiers) fromPrices[t.productId] = Math.min(fromPrices[t.productId] ?? Number.POSITIVE_INFINITY, t.priceCents);
+  }
+  return { store, sections: secs, products: prods, fromPrices };
 }
 
 /**
@@ -52,7 +61,8 @@ export async function getDraftStoreForOwner(usernameRaw: string, ownerUserId: st
       .where(and(eq(products.storeId, store.id), eq(products.status, "published"), eq(products.listed, true), isNull(products.deletedAt)))
       .orderBy(asc(products.position)),
   ]);
-  return { store, sections: secs, products: prods };
+  // Same shape as getPublicStore; a draft preview doesn't need "From $X" labels.
+  return { store, sections: secs, products: prods, fromPrices: {} as Record<string, number> };
 }
 
 /** Cached under the username tag (used by the page so the tag attaches). */
@@ -73,10 +83,12 @@ export async function getPublicProduct(username: string, slug: string) {
         where: and(eq(products.storeId, store.id), eq(products.slug, slug.toLowerCase()), eq(products.status, "published"), isNull(products.deletedAt)),
       });
       if (!product) return null;
-      const [files, links, approvedReviews, bump] = await Promise.all([
+      const [files, links, approvedReviews, variants, bump] = await Promise.all([
         db.select().from(productFiles).where(eq(productFiles.productId, product.id)).orderBy(asc(productFiles.position)),
         db.select().from(productLinks).where(eq(productLinks.productId, product.id)).orderBy(asc(productLinks.position)),
         db.select().from(reviews).where(and(eq(reviews.productId, product.id), eq(reviews.approved, true))),
+        // Pricing tiers, in display order.
+        db.select().from(productVariants).where(eq(productVariants.productId, product.id)).orderBy(asc(productVariants.position)),
         // Order bump: same store, paid, published, live download. Re-checked live at checkout.
         product.bumpProductId && product.bumpProductId !== product.id
           ? db.query.products.findFirst({
@@ -90,7 +102,7 @@ export async function getPublicProduct(username: string, slug: string) {
             })
           : Promise.resolve(undefined),
       ]);
-      return { store, product, files, links, reviews: approvedReviews, bump: bump && bump.priceCents > 0 ? bump : null };
+      return { store, product, files, links, reviews: approvedReviews, variants, bump: bump && bump.priceCents > 0 ? bump : null };
     },
     ["public-product", username.toLowerCase(), slug.toLowerCase()],
     { tags: [storeTag(username)], revalidate: 300 },

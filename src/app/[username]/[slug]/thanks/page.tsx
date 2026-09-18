@@ -155,7 +155,8 @@ export default async function ThanksPage({ params, searchParams }: Props) {
     .map((e) => ({
       ent: e,
       product: allProducts.find((p) => p.id === e.productId),
-      files: files.filter((f) => f.productId === e.productId),
+      // A pricing tier may unlock only some files; the entitlement snapshots which.
+      files: files.filter((f) => f.productId === e.productId && (!e.allowedFileIds || e.allowedFileIds.length === 0 || e.allowedFileIds.includes(f.id))),
       links: links.filter((l) => l.productId === e.productId),
     }))
     .filter((it): it is typeof it & { product: NonNullable<typeof it.product> } => Boolean(it.product));

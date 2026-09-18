@@ -27,6 +27,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ token: string }
   if (!order || order.status !== "paid") return notFound();
   const file = await db.query.productFiles.findFirst({ where: and(eq(productFiles.id, fileId), eq(productFiles.productId, ent.productId)) });
   if (!file) return notFound();
+  // Pricing tiers: a tier that includes only some files snapshots them on the entitlement at sale time.
+  if (ent.allowedFileIds && ent.allowedFileIds.length > 0 && !ent.allowedFileIds.includes(file.id)) return notFound();
 
   // Rate limit per entitlement: a leaked link can't be hammered. Durable across lambdas (counts the log table).
   const since = new Date(Date.now() - RATE_WINDOW_MS);

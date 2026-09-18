@@ -21,6 +21,8 @@ export type CardProduct = {
   external: boolean;
   /** Units left when the creator limited quantity; null = unlimited. */
   remaining?: number | null;
+  /** Overrides the formatted price, e.g. "From $19" for tiers or "Pay what you want". */
+  priceLabel?: string | null;
 };
 
 const LOW_STOCK_AT = 10;
@@ -51,7 +53,7 @@ function Cta({ text, external, small }: { text: string; external: boolean; small
  * Grid mode compacts callouts into vertical tiles so 2-up fits at 375px.
  */
 export function ProductCard({ product: p, mode = "list" }: { product: CardProduct; mode?: Mode }) {
-  const price = formatPrice(p.priceCents, p.currency);
+  const price = p.priceLabel ?? formatPrice(p.priceCents, p.currency);
   const onClick = () => {
     sendBeacon({ storeId: p.storeId, productId: p.id, type: "click" });
     ga("select_item", { item_list_name: mode, external: p.external, items: [gaItem(p)] });

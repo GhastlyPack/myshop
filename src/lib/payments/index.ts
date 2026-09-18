@@ -20,8 +20,10 @@ export type CheckoutInput = {
   productId: string;
   /** Main product price after any discount code. The bump (if any) is added on top. */
   amountCents: number;
-  /** Optional order bump; becomes a second Stripe line item. */
+  /** Optional order bump; becomes a second Stripe line item. (Legacy single; prefer `bumps`.) */
   bump?: CheckoutBump | null;
+  /** Every accepted order bump; each becomes its own line item. */
+  bumps?: CheckoutBump[];
   currency: string;
   buyerEmail: string;
   buyerName: string;
