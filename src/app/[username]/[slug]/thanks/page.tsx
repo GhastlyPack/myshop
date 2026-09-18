@@ -8,6 +8,7 @@ import { bookings, entitlements, orders, productFiles, productLinks, products, r
 import { StoreFooter } from "@/components/storefront/footer";
 import { PendingPoll } from "@/components/storefront/pending-poll";
 import { StorePixelEvent } from "@/components/storefront/store-pixels";
+import { BookingQuestionnaire } from "@/components/storefront/booking-questionnaire";
 import { resolveStorePixels } from "@/lib/pixels";
 import { env } from "@/lib/env";
 import { GaEvent } from "@/components/analytics/ga-event";
@@ -102,6 +103,14 @@ export default async function ThanksPage({ params, searchParams }: Props) {
                 </>
               )}
             </section>
+            {!pending && product.fields.length > 0 && (
+              <BookingQuestionnaire
+                orderId={order.id}
+                fields={product.fields}
+                initial={Object.fromEntries(Object.entries(order.customFields).filter(([k]) => !k.startsWith("__")))}
+                storeName={store.displayName}
+              />
+            )}
             {!pending && hasMaterials && (
               <section className="sf-surface p-6 sm:p-7">
                 <h2 className="sf-heading text-[1.1rem]">Before your call</h2>

@@ -42,11 +42,17 @@ export function CardPreview({
     external: form.type === "link",
     remaining: form.quantityLimit ?? null,
   };
-  const description = (form.description || "").replace(/[#*_`>]/g, "").trim();
-  const excerpt = description.length > 240 ? `${description.slice(0, 240).trimEnd()}…` : description;
+  // Keep paragraph breaks (a heading followed by a paragraph shouldn't run together), drop markdown markers.
+  const paragraphs = (form.description || "")
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/^[#>\-*\s]+/gm, "").replace(/[*_`]/g, "").trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  const totalLen = paragraphs.join(" ").length;
+  const excerptParas = totalLen > 260 ? [`${paragraphs.join(" ").slice(0, 260).trimEnd()}…`] : paragraphs;
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3 overflow-hidden">
       <link rel="stylesheet" href={googleFontsHref(theme)} />
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</span>
@@ -75,7 +81,15 @@ export function CardPreview({
           </p>
           <h3 className="sf-heading text-[1.15rem] leading-tight">{product.title}</h3>
           {product.subtitle && <p className="sf-muted mt-1 text-sm">{product.subtitle}</p>}
-          {excerpt ? <p className="mt-3 text-[0.9rem] leading-relaxed">{excerpt}</p> : <p className="sf-muted mt-3 text-sm italic">Add a description to see it here.</p>}
+          {excerptParas.length > 0 ? (
+            excerptParas.map((p, i) => (
+              <p key={i} className="mt-3 text-[0.9rem] leading-relaxed">
+                {p}
+              </p>
+            ))
+          ) : (
+            <p className="sf-muted mt-3 text-sm italic">Add a description to see it here.</p>
+          )}
           <span className="sf-btn mt-4 inline-flex text-sm">{form.type === "booking" ? form.buttonText || "Book a call" : product.buttonText}</span>
         </div>
       </div>

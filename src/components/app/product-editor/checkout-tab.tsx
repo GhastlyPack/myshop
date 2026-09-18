@@ -65,8 +65,12 @@ export function CheckoutTab({
       {isPro ? (
       <section className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
         <div>
-          <h2 className="text-sm font-semibold">Checkout questions</h2>
-          <p className="text-xs text-muted-foreground">Name and email are always asked. Add anything else you need, like an Instagram handle or a size.</p>
+          <h2 className="text-sm font-semibold">{form.type === "booking" ? "Pre-call questionnaire" : "Checkout questions"}</h2>
+          <p className="text-xs text-muted-foreground">
+            {form.type === "booking"
+              ? "Asked right after they book — on the confirmation page and by email. Their answers are emailed to you before the call."
+              : "Name and email are always asked. Add anything else you need, like an Instagram handle or a size."}
+          </p>
         </div>
         <FieldError>{errors.fields}</FieldError>
         <div className="space-y-3">

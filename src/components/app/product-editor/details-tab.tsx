@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ImageUpload } from "@/components/app/image-upload";
 import type { EditorSection, TabProps } from "@/components/app/product-editor/editor";
-import { Field, FieldError, FieldHint } from "@/components/app/product-editor/field";
+import { Field, FieldHint } from "@/components/app/product-editor/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,16 +11,7 @@ import { toSlug } from "@/lib/product-input";
 
 const NO_SECTION = "__none__";
 
-export function DetailsTab({
-  form,
-  update,
-  errors,
-  thumbnailUrl,
-  bannerUrl,
-  sections,
-  currency,
-  canBook,
-}: TabProps & { thumbnailUrl: string | null; bannerUrl: string | null; sections: EditorSection[]; currency: string }) {
+export function DetailsTab({ form, update, errors, sections, currency, canBook }: TabProps & { sections: EditorSection[]; currency: string }) {
   const [slugTouched, setSlugTouched] = useState(Boolean(form.slug) && form.slug !== toSlug(form.title) && !form.slug.startsWith("untitled-"));
   const [priceText, setPriceText] = useState(centsToDollars(form.priceCents));
   const [priceError, setPriceError] = useState<string | null>(null);
@@ -39,7 +29,7 @@ export function DetailsTab({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div className="grid gap-6">
       <div className="space-y-5 rounded-xl border bg-background p-4 sm:p-5">
         <Field label="Title" htmlFor="title" error={errors.title}>
           <Input id="title" value={form.title} onChange={(e) => onTitle(e.target.value)} maxLength={140} placeholder="30-day content calendar" aria-invalid={Boolean(errors.title)} />
@@ -74,8 +64,12 @@ export function DetailsTab({
               value={form.type}
               onValueChange={(v) => {
                 const type = v as "download" | "link" | "booking";
-                // Booking products need a default call length; give one when switching in.
-                update(type === "booking" ? { type, durationMinutes: form.durationMinutes ?? 60 } : { type });
+                // Booking products need a default call length and a CTA that reads like one; only replace the stock "Get it".
+                update(
+                  type === "booking"
+                    ? { type, durationMinutes: form.durationMinutes ?? 60, ...(form.buttonText === "Get it" ? { buttonText: "Book a call" } : {}) }
+                    : { type, ...(form.buttonText === "Book a call" ? { buttonText: "Get it" } : {}) },
+                );
               }}
             >
               <SelectTrigger className="w-full">
@@ -158,13 +152,6 @@ export function DetailsTab({
           </Select>
           {sections.length === 0 && <FieldHint>Create sections from your store page to group products.</FieldHint>}
         </Field>
-      </div>
-
-      <div className="space-y-5 rounded-xl border bg-background p-4 sm:p-5">
-        <ImageUpload scope="thumb" shape="square" label="Thumbnail" hint="Square, at least 400 x 400." initialUrl={thumbnailUrl} onChange={(key) => update({ thumbnailKey: key })} />
-        <FieldError>{errors.thumbnailKey}</FieldError>
-        <ImageUpload scope="banner" shape="wide" label="Banner" hint="Wide, shown at the top of the product page." initialUrl={bannerUrl} onChange={(key) => update({ bannerKey: key })} />
-        <FieldError>{errors.bannerKey}</FieldError>
       </div>
     </div>
   );

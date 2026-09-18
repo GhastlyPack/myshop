@@ -17,6 +17,8 @@ export type BookingEmailProps = {
   /** Pre-call materials attached to the booking product (download links + external links). */
   downloads?: { name: string; url: string }[];
   links?: { label: string; url: string }[];
+  /** When the creator set pre-call questions: where the buyer answers them (the booking page). */
+  questionnaireUrl?: string;
 };
 
 export function BookingEmail(p: BookingEmailProps) {
@@ -59,10 +61,51 @@ export function BookingEmail(p: BookingEmailProps) {
           ))}
         </Section>
       )}
+      {!p.forCreator && p.questionnaireUrl && (
+        <Section style={{ margin: "0 0 18px" }}>
+          <Text style={{ ...s.p, margin: "0 0 10px" }}>To make the most of your time, answer a few quick questions before the call.</Text>
+          <Button href={p.questionnaireUrl} style={s.buttonSecondary}>
+            Answer the pre-call questions
+          </Button>
+        </Section>
+      )}
       <Hr style={{ borderColor: "#DDE3EC", margin: "18px 0" }} />
       <Text style={s.muted}>The invite is attached as a calendar file, and it&apos;s on {p.forCreator ? "your" : "the host's"} Google Calendar too. Need to change it? Just reply to this email.</Text>
     </EmailLayout>
   );
+}
+
+/** Sent to the creator when a buyer submits the pre-call questionnaire. */
+export type QuestionnaireEmailProps = {
+  storeName: string;
+  buyerName: string;
+  buyerEmail: string;
+  productTitle: string;
+  whenText: string;
+  answers: { label: string; value: string }[];
+};
+
+export function QuestionnaireEmail(p: QuestionnaireEmailProps) {
+  return (
+    <EmailLayout storeName={p.storeName} preview={`${p.buyerName} answered your pre-call questions`}>
+      <Text style={s.h1}>Pre-call answers from {p.buyerName}</Text>
+      <Text style={s.p}>
+        For {p.productTitle} · {p.whenText}. Reply to this email to reach them at {p.buyerEmail}.
+      </Text>
+      {p.answers.map((a) => (
+        <div key={a.label} style={s.fileRow}>
+          <Text style={{ ...s.muted, margin: "0 0 4px", fontWeight: 600, color: "#111111" }}>{a.label}</Text>
+          <Text style={{ ...s.p, margin: 0, whiteSpace: "pre-wrap" as const }}>{a.value || "—"}</Text>
+        </div>
+      ))}
+    </EmailLayout>
+  );
+}
+
+export async function renderQuestionnaireEmail(props: QuestionnaireEmailProps) {
+  const element = <QuestionnaireEmail {...props} />;
+  const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+  return { subject: `Pre-call answers from ${props.buyerName} — ${props.productTitle}`, html, text };
 }
 
 export async function renderBookingEmail(props: BookingEmailProps) {

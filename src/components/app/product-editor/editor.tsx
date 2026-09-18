@@ -11,6 +11,7 @@ import { CheckoutTab } from "@/components/app/product-editor/checkout-tab";
 import { ContentTab } from "@/components/app/product-editor/content-tab";
 import { DetailsTab } from "@/components/app/product-editor/details-tab";
 import { CardPreview } from "@/components/app/product-editor/card-preview";
+import { MediaPanel } from "@/components/app/product-editor/media-panel";
 import type { ResolvedTheme } from "@/lib/theme";
 import { OptionsTab } from "@/components/app/product-editor/options-tab";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +81,7 @@ export function ProductEditor({
   const { id, status: initialStatus, ...rest } = product;
   const [form, setForm] = useState<ProductInput>({ ...rest, links });
   const [status, setStatus] = useState(initialStatus);
+  const [showPreview, setShowPreview] = useState(true);
   const [savedSlug, setSavedSlug] = useState(product.slug);
   const [files, setFiles] = useState<FileRow[]>(initialFiles);
   const [errors, setErrors] = useState<Errors>({});
@@ -175,8 +177,8 @@ export function ProductEditor({
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-      <Tabs value={tab} onValueChange={setTab}>
+      <div className={`grid gap-6 ${showPreview ? "xl:grid-cols-[minmax(0,1fr)_340px]" : ""} xl:items-start`}>
+      <Tabs value={tab} onValueChange={setTab} className="min-w-0">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -184,7 +186,7 @@ export function ProductEditor({
           <TabsTrigger value="options">Options</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="pt-4">
-          <DetailsTab form={form} update={update} errors={errors} thumbnailUrl={thumbnailUrl} bannerUrl={bannerUrl} sections={sections} currency={store.currency} canBook={canBook} />
+          <DetailsTab form={form} update={update} errors={errors} sections={sections} currency={store.currency} canBook={canBook} />
         </TabsContent>
         <TabsContent value="content" className="pt-4">
           <ContentTab form={form} update={update} errors={errors} productId={id} files={files} setFiles={setFiles} />
@@ -206,8 +208,19 @@ export function ProductEditor({
           <OptionsTab form={form} update={update} errors={errors} productId={id} username={store.username} slug={savedSlug} />
         </TabsContent>
       </Tabs>
-      <aside className="lg:sticky lg:top-6">
-        <CardPreview form={form} theme={theme} thumbnailUrl={thumbnailUrl} bannerUrl={bannerUrl} currency={store.currency} />
+      <aside className="min-w-0 space-y-4 overflow-hidden xl:sticky xl:top-6">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Images &amp; preview</span>
+          <button type="button" onClick={() => setShowPreview((v) => !v)} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+            {showPreview ? "Hide" : "Show"}
+          </button>
+        </div>
+        {showPreview && (
+          <>
+            <MediaPanel update={update} errors={errors} thumbnailUrl={thumbnailUrl} bannerUrl={bannerUrl} />
+            <CardPreview form={form} theme={theme} thumbnailUrl={thumbnailUrl} bannerUrl={bannerUrl} currency={store.currency} />
+          </>
+        )}
       </aside>
       </div>
     </div>

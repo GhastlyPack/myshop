@@ -23,6 +23,22 @@ export function ContentTab({
   files,
   setFiles,
 }: TabProps & { productId: string; files: FileRow[]; setFiles: React.Dispatch<React.SetStateAction<FileRow[]>> }) {
+  if (form.type === "booking") {
+    // A call can carry optional prep materials: files and/or links, delivered with the confirmation.
+    return (
+      <div className="space-y-6">
+        <FilesPanel
+          productId={productId}
+          files={files}
+          setFiles={setFiles}
+          error={errors.files}
+          title="Pre-call materials"
+          hint="Optional. Anything you want them to read or fill in before the call — a prep doc, an intake PDF. Sent with their confirmation email and shown on the booking page."
+        />
+        <LinksPanel form={form} update={update} errors={errors} />
+      </div>
+    );
+  }
   return form.type === "download" ? (
     <FilesPanel productId={productId} files={files} setFiles={setFiles} error={errors.files} />
   ) : (
@@ -35,11 +51,15 @@ function FilesPanel({
   files,
   setFiles,
   error,
+  title = "Files",
+  hint = "Buyers get a private download link for each file after checkout. Files save as soon as they finish uploading.",
 }: {
   productId: string;
   files: FileRow[];
   setFiles: React.Dispatch<React.SetStateAction<FileRow[]>>;
   error?: string;
+  title?: string;
+  hint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -94,8 +114,8 @@ function FilesPanel({
   return (
     <div className="space-y-4 rounded-xl border bg-background p-4 sm:p-5">
       <div>
-        <h2 className="text-sm font-semibold">Files</h2>
-        <p className="text-xs text-muted-foreground">Buyers get a private download link for each file after checkout. Files save as soon as they finish uploading.</p>
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <p className="text-xs text-muted-foreground">{hint}</p>
       </div>
       <FieldError>{error}</FieldError>
 

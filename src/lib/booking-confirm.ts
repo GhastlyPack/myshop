@@ -127,6 +127,8 @@ export async function confirmBooking(opts: {
       forCreator: false,
       downloads,
       links,
+      // Pre-call questionnaire lives on the booking page; only offer it when the creator set questions.
+      questionnaireUrl: product.fields.length > 0 ? `${env.APP_BASE_URL.replace(/\/+$/, "")}/${store.username}/${product.slug}/thanks?o=${orderId}` : undefined,
     });
     await sendMail({ to: buyerEmail, ...buyerMail, attachments });
 

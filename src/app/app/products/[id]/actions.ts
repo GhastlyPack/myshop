@@ -92,7 +92,8 @@ export async function saveProduct(id: string, input: ProductInput, intent: "save
     if (d.type === "download") {
       const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(productFiles).where(eq(productFiles.productId, product.id));
       if (Number(n) === 0) errors.files = "Upload at least one file before publishing.";
-    } else if (d.links.length === 0) {
+    } else if (d.type === "link" && d.links.length === 0) {
+      // Only link products need a link. Bookings deliver a call; files/links on them are optional pre-call materials.
       errors.links = "Add at least one link before publishing.";
     }
     if (Object.keys(errors).length === 0) status = "published";
