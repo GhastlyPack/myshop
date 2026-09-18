@@ -15,6 +15,7 @@
     "seed": "tsx scripts/seed.ts",
     "test:payments": "tsx --tsconfig scripts/tsconfig.test.json scripts/test-payments.ts",
     "test:billing": "tsx --tsconfig scripts/tsconfig.test.json scripts/test-billing.ts",
+    "test:booking": "tsx --tsconfig scripts/tsconfig.test.json scripts/test-booking.ts",
     "setup:billing": "tsx --tsconfig scripts/tsconfig.test.json scripts/setup-billing.ts",
     "import:products": "tsx scripts/import-products.ts",
     "build:web": "next build"

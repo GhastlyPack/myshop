@@ -24,7 +24,9 @@ const updatedAt = () =>
 
 // ---------- enums ----------
 export const userRole = pgEnum("user_role", ["creator", "admin", "owner"]);
-export const productType = pgEnum("product_type", ["download", "link"]);
+export const productType = pgEnum("product_type", ["download", "link", "booking"]);
+export const calendarProvider = pgEnum("calendar_provider", ["google"]);
+export const bookingStatus = pgEnum("booking_status", ["confirmed", "canceled"]);
 export const productStatus = pgEnum("product_status", ["draft", "published"]);
 export const cardStyle = pgEnum("card_style", ["button", "callout", "preview"]);
 export const paymentProvider = pgEnum("payment_provider", ["stripe", "paypal"]);
@@ -73,6 +75,23 @@ export type StorePixels = {
   tiktok?: { pixelId?: string };
 };
 
+/** One open window on a weekday, in the store's timezone. "HH:MM" 24-hour. */
+export type AvailabilityWindow = { start: string; end: string };
+/** Recurring weekly open hours, keyed by weekday 0=Sunday … 6=Saturday. */
+export type WeeklyHours = Partial<Record<0 | 1 | 2 | 3 | 4 | 5 | 6, AvailabilityWindow[]>>;
+
+/**
+ * A creator's booking availability. Open hours are set here; the connected calendar's
+ * busy times are subtracted at slot-generation time. Durations live on each booking product.
+ */
+export type BookingSettings = {
+  timezone?: string; // IANA, e.g. "America/New_York"
+  weekly?: WeeklyHours;
+  bufferMin?: number; // padding kept clear after each call
+  minNoticeHours?: number; // soonest a call can be booked from now
+  maxAdvanceDays?: number; // furthest out a call can be booked
+};
+
 // ---------- tables ----------
 export const users = pgTable(
   "users",
@@ -103,6 +122,7 @@ export const stores = pgTable(
     socials: jsonb("socials").$type<SocialLinks>().notNull().default({}),
     theme: jsonb("theme").$type<Theme>().notNull().default(sql`'{}'::jsonb`),
     pixels: jsonb("pixels").$type<StorePixels>().notNull().default({}),
+    booking: jsonb("booking").$type<BookingSettings>().notNull().default({}),
     currency: text("currency").notNull().default("usd"),
     published: boolean("published").notNull().default(true),
     // platform billing — unused until Commas / app fees land
@@ -146,6 +166,7 @@ export const products = pgTable(
     cardStyle: cardStyle("card_style").notNull().default("callout"),
     buttonText: text("button_text").notNull().default("Get it"),
     priceCents: integer("price_cents").notNull().default(0), // 0 = free
+    durationMinutes: integer("duration_minutes"), // booking products: call length
     currency: text("currency").notNull().default("usd"),
     listed: boolean("listed").notNull().default(true), // shown on storefront
     fields: jsonb("fields").$type<CustomField[]>().notNull().default([]),
@@ -495,6 +516,60 @@ export const jobs = pgTable(
   (t) => [index("jobs_pending_idx").on(t.done, t.runAt)],
 );
 
+/**
+ * A creator's connected calendar (Google in V1). We read its busy times to block
+ * availability and write confirmed bookings back to it with a Meet link. Tokens are
+ * AES-GCM encrypted with SESSION_SECRET (see lib/calendar). One per store.
+ */
+export const calendarConnections = pgTable(
+  "calendar_connections",
+  {
+    id: id(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    provider: calendarProvider("provider").notNull().default("google"),
+    email: text("email").notNull(), // the connected account
+    calendarId: text("calendar_id").notNull().default("primary"),
+    accessTokenEnc: text("access_token_enc").notNull(),
+    refreshTokenEnc: text("refresh_token_enc").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
+    scope: text("scope"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("calendar_connections_store_idx").on(t.storeId)],
+);
+
+/**
+ * A confirmed (or canceled) call slot. Also our own busy list, so two buyers can't take
+ * the same time even before the calendar round-trips. `orderId` ties it to the payment.
+ */
+export const bookings = pgTable(
+  "bookings",
+  {
+    id: id(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    orderId: text("order_id").references(() => orders.id, { onDelete: "set null" }),
+    buyerEmail: text("buyer_email").notNull(),
+    buyerName: text("buyer_name").notNull(),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    timezone: text("timezone").notNull(), // the buyer's timezone, for display
+    status: bookingStatus("status").notNull().default("confirmed"),
+    googleEventId: text("google_event_id"),
+    meetingUrl: text("meeting_url"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("bookings_store_start_idx").on(t.storeId, t.startAt), index("bookings_order_idx").on(t.orderId)],
+);
+
 // ---------- inferred types ----------
 export type User = typeof users.$inferSelect;
 export type Store = typeof stores.$inferSelect;
@@ -513,3 +588,5 @@ export type InstagramReply = typeof instagramReplies.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 
 export type InstagramBetaRequest = typeof instagramBetaRequests.$inferSelect;
+export type CalendarConnection = typeof calendarConnections.$inferSelect;
+export type Booking = typeof bookings.$inferSelect;

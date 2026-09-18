@@ -20,8 +20,10 @@ export const productInputSchema = z.object({
   subtitle: z.string().trim().max(200, "Keep the subtitle under 200 characters."),
   slug: z.string().trim().max(80, "Keep the slug under 80 characters."),
   description: z.string().max(20000, "Description is too long."),
-  type: z.enum(["download", "link"]),
+  type: z.enum(["download", "link", "booking"]),
   priceCents: z.number().int().min(0).max(100_000_000, "That price is too high."),
+  /** Booking products: call length in minutes. Null for non-booking products. */
+  durationMinutes: z.number().int().min(5).max(600).nullable().default(null),
   cardStyle: z.enum(["button", "callout", "preview"]),
   buttonText: z.string().trim().min(1, "Add button text.").max(40, "Keep button text short."),
   thumbnailKey: z.string().nullable(),

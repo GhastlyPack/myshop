@@ -37,7 +37,7 @@ export type BoardProduct = {
   currency: string;
   status: "draft" | "published";
   listed: boolean;
-  type: "download" | "link";
+  type: "download" | "link" | "booking";
   thumbnailUrl: string | null;
 };
 
