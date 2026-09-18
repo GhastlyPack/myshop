@@ -114,8 +114,8 @@ export default async function Home() {
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20 lg:py-28">
           <DmMockup />
           <div>
-            <h2 className="ld-heading text-[2.4rem] sm:text-[3.2rem]">Comment “consult”. Get booked.</h2>
-            <p className="ld-muted mt-5 max-w-lg text-lg leading-relaxed">Your buyers are already in your DMs. Give a product a keyword and the reply, the card, and the link are automatic.</p>
+            <h2 className="ld-heading text-[2.4rem] sm:text-[3.2rem]">They type one word. You make the sale.</h2>
+            <p className="ld-muted mt-5 max-w-lg text-lg leading-relaxed">Your buyers are already in your DMs. Give any product a keyword, any word you like, and the reply, the card, and the link are automatic.</p>
             <dl className="mt-10 divide-y divide-white/10 border-y border-white/10">
               {IG_ROWS.map(([title, body]) => (
                 <div key={title} className="py-5">
