@@ -3,6 +3,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { MobileMenu } from "./mobile-menu";
 
 const links = [
+  { href: "/features", label: "Features" },
   { href: "/#themes", label: "Themes" },
   { href: "/pricing", label: "Pricing" },
   { href: "/compare", label: "Compare" },

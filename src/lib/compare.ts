@@ -69,7 +69,9 @@ export const MATRIX: MatrixRow[] = [
   { label: "Reviews from buyers", us: "Yes, you approve them", stan: "Pasted by hand", linktree: "No", beacons: "No", gumroad: "Ratings" },
   { label: "Pixel tracking", us: "Pro", stan: "$99 plan", linktree: "Paid plans", beacons: "Paid plans", gumroad: "Yes" },
   { label: "Instagram keyword replies", us: "Pro", stan: "AutoDM", linktree: "No", beacons: "Some", gumroad: "No" },
-  { label: "Discount codes, bumps, limits", us: "Pro", stan: "Paid plans", linktree: "Some", beacons: "Some", gumroad: "Discounts" },
+  { label: "Discount codes, limits", us: "Pro", stan: "Paid plans", linktree: "Some", beacons: "Some", gumroad: "Discounts" },
+  { label: "Order bumps per product", us: "Up to 5 (Pro)", stan: "1", linktree: "No", beacons: "No", gumroad: "No" },
+  { label: "Pricing tiers, pay what you want", us: "Pro", stan: "No", linktree: "No", beacons: "No", gumroad: "PWYW only" },
   { label: "Booking calls", us: "Pro ($49): Google Calendar + Meet", stan: "$99 plan", linktree: "No", beacons: "No", gumroad: "No" },
   { label: "Courses, memberships", us: "Coming soon", stan: "Yes", linktree: "No", beacons: "Some", gumroad: "Memberships" },
 ];

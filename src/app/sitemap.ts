@@ -9,6 +9,7 @@ export const revalidate = 3600;
 const STATIC: [string, MetadataRoute.Sitemap[number]["changeFrequency"], number][] = [
   ["/", "weekly", 1],
   ["/pricing", "monthly", 0.8],
+  ["/features", "monthly", 0.8],
   ["/compare", "monthly", 0.8],
   ["/compare/stan-store", "monthly", 0.8],
   ["/compare/linktree", "monthly", 0.7],

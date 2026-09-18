@@ -22,12 +22,13 @@ export const metadata: Metadata = {
 
 const FEATURES = [
   ["Any product, free or paid", "A lead magnet or a $39 manual, listed on your store or hidden as its own landing page."],
+  ["Name your price. Or three.", "Pay what you want with a floor you set, or one product at Basic, Plus, and Pro prices, each unlocking the files you pick. On Pro."],
+  ["Order bumps, plural", "Up to five one-tap add-ons above the pay button, each with its own discount. Stan allows one. On Pro."],
+  ["Booking calls", "Sell a 60-minute call. Buyers pick a time in their timezone and pay; it lands on your Google Calendar with a Meet link, a prep doc, and a pre-call questionnaire. On Pro."],
+  ["Instagram DM keyword", "Give a product a keyword. DM “guide” or “consult” and the branded card with the link goes out automatically. Auto-replies on Pro."],
+  ["Your own pixels", "Connect your Meta, Google, and TikTok pixels and every view, checkout, and purchase fires on your storefront. On Pro."],
+  ["Reviews and a buyer library", "Buyers rate it and leave a line; you approve what shows. Everything they’ve ever bought lives behind one magic link at visitmy.shop/me."],
   ["Clean product links", "visitmy.shop/you/my-guide. No random numbers stapled to the end."],
-  ["Reviews from buyers", "After the download, buyers rate it and leave a line. You approve what shows."],
-  ["A library for your buyers", "Everything they’ve ever bought, from every creator, behind one magic link at visitmy.shop/me."],
-  ["Analytics", "Views, clicks per card, conversions, and where the traffic came from. Meta, Google, and TikTok pixels on Pro."],
-  ["Instagram DM keyword", "Give a product a keyword and get the caption, the auto-reply, and the story CTA, ready to paste. Auto-replies on Pro."],
-  ["Booking calls", "Sell a 60-minute call. Buyers pick a time from your open hours and pay; it lands on your Google Calendar with a Meet link. DM “consult” and the booking link goes out automatically. On Pro."],
 ];
 
 export default async function Home() {
@@ -119,14 +120,19 @@ export default async function Home() {
               <h2 className="ld-heading text-[2.4rem] sm:text-[3rem]">What you get.</h2>
               <p className="ld-muted mt-5 max-w-md text-lg leading-relaxed">The storefront, the checkout, the delivery, the reviews, and the numbers. One place, one link.</p>
             </div>
-            <dl className="divide-y ld-line border-y ld-line">
-              {FEATURES.map(([title, body]) => (
-                <div key={title} className="grid gap-2 py-5 sm:grid-cols-[220px_1fr] sm:gap-8">
-                  <dt className="font-semibold">{title}</dt>
-                  <dd className="ld-muted leading-relaxed">{body}</dd>
-                </div>
-              ))}
-            </dl>
+            <div>
+              <dl className="divide-y ld-line border-y ld-line">
+                {FEATURES.map(([title, body]) => (
+                  <div key={title} className="grid gap-2 py-5 sm:grid-cols-[220px_1fr] sm:gap-8">
+                    <dt className="font-semibold">{title}</dt>
+                    <dd className="ld-muted leading-relaxed">{body}</dd>
+                  </div>
+                ))}
+              </dl>
+              <Link href="/features" className="ld-btn ld-btn-ghost mt-8">
+                See every feature
+              </Link>
+            </div>
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Wordmark } from "@/components/brand/wordmark";
 
 const COLUMNS: { title: string; links: [string, string][] }[] = [
-  { title: "Product", links: [["Pricing", "/pricing"], ["FAQ", "/faq"], ["Demo store", "/demo"], ["Creators", "/creators"], ["Changelog", "/changelog"]] },
+  { title: "Product", links: [["Features", "/features"], ["Pricing", "/pricing"], ["FAQ", "/faq"], ["Demo store", "/demo"], ["Creators", "/creators"], ["Changelog", "/changelog"]] },
   { title: "Compare", links: [["Stan store alternative", "/compare/stan-store"], ["Linktree alternative", "/compare/linktree"], ["Beacons alternative", "/compare/beacons"], ["Gumroad alternative", "/compare/gumroad"], ["All comparisons", "/compare"]] },
   { title: "Learn", links: [["Sell digital products from your Instagram bio", "/guides/sell-digital-products-from-instagram-bio"], ["My downloads", "/me"]] },
 ];
