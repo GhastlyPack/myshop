@@ -43,14 +43,13 @@ const TRIAL_STEPS: [string, string][] = [
 export default async function PricingPage() {
   const user = await getCurrentUser();
   const ctaHref = user ? "/app" : loginPath("/app");
-  const breakEven = Math.round((pro.monthly - basic.monthly) / (basic.feePercent / 100));
   return (
     <MarketingShell>
       <main className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
         <div className="max-w-2xl">
           <h1 className="ld-heading text-[2.6rem] sm:text-[3.4rem]">Start at ${basic.monthly}. Keep up to 100%.</h1>
           <p className="ld-muted mt-6 text-xl leading-relaxed">
-            Two plans. Basic keeps {100 - basic.feePercent}% of each sale. When your sales grow, Pro pays for itself by dropping the fee to zero. Design your store before you pay a cent.
+            Two plans. Basic gets you selling from your bio. Pro adds booking calls, Instagram auto-replies, pricing tiers, order bumps, and your own pixels, and drops the fee to zero. Design your store before you pay a cent.
           </p>
         </div>
         <div className="mt-12">
@@ -105,11 +104,11 @@ export default async function PricingPage() {
         {/* ---------- the two numbers people ask about ---------- */}
         <section className="mt-20 grid gap-5 lg:mt-28 lg:grid-cols-2">
           <div className="ld-card p-7 sm:p-9">
-            <div className="ld-heading text-[2.6rem]">${breakEven.toLocaleString()} a month</div>
-            <h2 className="mt-2 text-lg font-semibold">Where Pro starts paying for itself</h2>
+            <div className="ld-heading text-[2.6rem]">One call a month</div>
+            <h2 className="mt-2 text-lg font-semibold">Pro pays for itself with a single sale</h2>
             <p className="ld-muted mt-3 leading-relaxed">
-              Basic is ${basic.monthly} plus {basic.feePercent}% of sales. Pro is ${pro.monthly} with no fee. Below ${breakEven.toLocaleString()} in monthly sales Basic is cheaper; above it Pro keeps more every month. Most
-              creators start on Basic and switch once a product takes off.
+              A $120 call, a template at its Pro tier, an order bump on every order: those are Pro features, and any one of them covers the ${pro.monthly}. Everything else Pro
+              makes is yours, because the fee is 0%.
             </p>
           </div>
           <div className="ld-card p-7 sm:p-9">
